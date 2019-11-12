@@ -14,6 +14,7 @@ public class MapNoninteractiveClient {
 
     private static volatile int count = 0;
     private static int prev = 0;
+    private static volatile Logger logger = LoggerFactory.getLogger(MapNoninteractiveClient.class);
 
     public static void main(String[] args) {
         if (args.length < 4) {
@@ -31,7 +32,7 @@ public class MapNoninteractiveClient {
 
         final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         final Runnable ticker = () -> {
-        	System.out.println((count - prev) * 10 + " req/s");
+            logger.info((count - prev) * 10 + " req/s");
         	prev = count;
 		};
         final ScheduledFuture<?> tickerHandle = scheduler.scheduleAtFixedRate(ticker, 100, 100, TimeUnit.MILLISECONDS);
@@ -46,10 +47,10 @@ public class MapNoninteractiveClient {
 				count++;
             }
             if(i == 0) {
-				System.out.println("First puts are done.");
+                logger.info("First puts are done.");
 			}
         }
-        System.out.println("All tasks are done.");
+        logger.info("All tasks are done.");
         scheduler.schedule(() -> tickerHandle.cancel(true), 0, TimeUnit.SECONDS);
     }
 
