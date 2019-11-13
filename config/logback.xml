@@ -17,7 +17,7 @@
   </appender>
 
 
-  <timestamp key="bySecond" dataPattern="yyyyMMdd'T'HHmmss" />
+  <timestamp key="bySecond" datePattern="yyyyMMdd'T'HHmmss" />
   <appender name="FILE" class="ch.qos.logback.core.FileAppender">
     <file>logs/bftsmart-${bySecond}.log</file>
     <encoder>
