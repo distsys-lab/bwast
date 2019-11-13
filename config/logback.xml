@@ -37,7 +37,7 @@
 
   </root>
   
-  <logger name="bftsmart" level="DEBUG">
+  <logger name="bftsmart" level="INFO">
 
     <appender-ref ref="MIN-STDOUT" />
     <appender-ref ref="FILE" />

@@ -32,10 +32,10 @@ public class MapNoninteractiveClient {
 
         final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         final Runnable ticker = () -> {
-            logger.info((count - prev) * 10 + " req/s");
+            logger.info((count - prev) + " req/s");
         	prev = count;
 		};
-        final ScheduledFuture<?> tickerHandle = scheduler.scheduleAtFixedRate(ticker, 100, 100, TimeUnit.MILLISECONDS);
+        final ScheduledFuture<?> tickerHandle = scheduler.scheduleAtFixedRate(ticker, 1, 1, TimeUnit.SECONDS);
 
         for (int i = 0; i < times; i++) {
             String value = generateRandomString(valueSize);
