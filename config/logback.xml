@@ -1,7 +1,7 @@
-<configuration debug="false"> 
+<configuration debug="false">
 
   <!-- Logging to console -->
-  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender"> 
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     
     <encoder>
       <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
@@ -16,8 +16,10 @@
     </encoder>
   </appender>
 
+
+  <timestamp key="bySecond" dataPattern="yyyyMMdd'T'HHmmss" />
   <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-    <file>logs/bftsmart.log</file>
+    <file>logs/bftsmart-${bySecond}.log</file>
     <encoder>
       <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
     </encoder>
