@@ -42,6 +42,7 @@ public class TOMConfiguration extends Configuration {
     protected int outQueueSize;
     protected boolean shutdownHookEnabled;
     protected boolean useSenderThread;
+    protected int sourceNum;
     private int numNIOThreads;
     private int useMACs;
     private int useSignatures;
@@ -190,6 +191,13 @@ public class TOMConfiguration extends Configuration {
                 stateTransferEnabled = false;
             } else {
                 stateTransferEnabled = Boolean.parseBoolean(s);
+            }
+
+            s = (String) configs.remove("system.totalordermulticast.source_num");
+            if (s == null) {
+                sourceNum = -1;
+            } else {
+                sourceNum = Integer.parseInt(s);
             }
 
             s = (String) configs.remove("system.totalordermulticast.checkpoint_period");
@@ -403,6 +411,10 @@ public class TOMConfiguration extends Configuration {
 
     public boolean isStateTransferEnabled() {
         return stateTransferEnabled;
+    }
+
+    public int getSourceNum() {
+        return sourceNum;
     }
 
     public int getInQueueSize() {
