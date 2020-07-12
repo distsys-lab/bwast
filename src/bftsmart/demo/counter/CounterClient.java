@@ -20,6 +20,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import bftsmart.tom.ServiceProxy;
 
@@ -30,6 +37,10 @@ import bftsmart.tom.ServiceProxy;
  */
 public class CounterClient {
 
+    private static volatile int count = 0;
+    private static volatile int prev = 0;
+    private static volatile Logger logger = LoggerFactory.getLogger(CounterClient.class);
+
     public static void main(String[] args) throws IOException {
         if (args.length < 2) {
             System.out.println("Usage: java ... CounterClient <process id> <increment> [<number of operations>]");
@@ -39,7 +50,14 @@ public class CounterClient {
         }
 
         ServiceProxy counterProxy = new ServiceProxy(Integer.parseInt(args[0]));
-        
+
+        final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        final Runnable ticker = () -> {
+            logger.info((count - prev) + " req/s");
+            prev = count;
+        };
+        final ScheduledFuture<?> tickerHandle = scheduler.scheduleAtFixedRate(ticker, 1, 1, TimeUnit.SECONDS);
+
         try {
 
             int inc = Integer.parseInt(args[1]);
@@ -49,22 +67,27 @@ public class CounterClient {
 
                 ByteArrayOutputStream out = new ByteArrayOutputStream(4);
                 new DataOutputStream(out).writeInt(inc);
-
-                System.out.print("Invocation " + i);
                 byte[] reply = (inc == 0)?
                         counterProxy.invokeUnordered(out.toByteArray()):
                 	counterProxy.invokeOrdered(out.toByteArray()); //magic happens here
                 
                 if(reply != null) {
                     int newValue = new DataInputStream(new ByteArrayInputStream(reply)).readInt();
-                    System.out.println(", returned value: " + newValue);
+                    if(i == 0) {
+                        logger.info("start counting");
+                    }
+                    //System.out.println(", returned value: " + newValue);
+                    count = newValue;
                 } else {
-                    System.out.println(", ERROR! Exiting.");
+                    logger.error("ERROR! Exiting.");
                     break;
                 }
+                Thread.sleep(10);
             }
-        } catch(IOException | NumberFormatException e){
+        } catch(IOException | NumberFormatException | InterruptedException e){
             counterProxy.close();
         }
+
+        scheduler.schedule(() -> tickerHandle.cancel(true), 0, TimeUnit.SECONDS);
     }
 }

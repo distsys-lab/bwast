@@ -41,6 +41,7 @@ import bftsmart.tom.core.messages.ForwardedMessage;
 import bftsmart.tom.leaderchange.RequestsTimer;
 import bftsmart.tom.server.Recoverable;
 import bftsmart.tom.server.RequestVerifier;
+import bftsmart.tom.server.defaultservices.ModifiedDefaultSingleRecoverable;
 import bftsmart.tom.util.BatchBuilder;
 import bftsmart.tom.util.BatchReader;
 import bftsmart.tom.util.TOMUtil;
@@ -163,7 +164,12 @@ public final class TOMLayer extends Thread implements RequestReceiver {
         this.prk = this.controller.getStaticConf().getPrivateKey();
         this.dt = new DeliveryThread(this, receiver, recoverer, this.controller); // Create delivery thread
         this.dt.start();
-        this.stateManager = recoverer.getStateManager();
+        if(recoverer instanceof ModifiedDefaultSingleRecoverable) {
+            //FIXME: dirty hack
+            this.stateManager = ((ModifiedDefaultSingleRecoverable)recoverer).getStateManager(this.controller.getStaticConf());
+        } else {
+            this.stateManager = recoverer.getStateManager();
+        }
         stateManager.init(this, dt);
         
         this.verifier = (verifier != null) ? verifier : ((request) -> true); // By default, never validate requests 

@@ -52,7 +52,7 @@ public class StandardStateManager extends BaseStateManager {
     private int replica;
     private ReentrantLock lockTimer = new ReentrantLock();
     private Timer stateTimer = null;
-    private final static long INIT_TIMEOUT = 40000;
+    private final static long INIT_TIMEOUT = 180000;
     private long timeout = INIT_TIMEOUT;
     
     //private LCManager lcManager;
@@ -68,7 +68,7 @@ public class StandardStateManager extends BaseStateManager {
         //this.lcManager = tomLayer.getSyncher().getLCManager();
         this.execManager = tomLayer.execManager;
 
-        chooseReplicaFromConfig(); // initialize replica from which to ask the complete state
+        changeReplica(); // initialize replica from which to ask the complete state
                 
         //this.replica = 0;
         //if (SVController.getCurrentViewN() > 1 && replica == SVController.getStaticConf().getProcessId())
@@ -100,24 +100,13 @@ public class StandardStateManager extends BaseStateManager {
             }
         } while (replica == SVController.getStaticConf().getProcessId());
     }
-
-    private void chooseReplicaFromConfig() {
-        int[] processes = this.SVController.getCurrentViewOtherAcceptors();
-        int ownProcessId = SVController.getStaticConf().getProcessId();
-        int sourceNum = SVController.getStaticConf().getSourceNum();
-        if(sourceNum == -1 || sourceNum == ownProcessId || processes == null || sourceNum >= processes.length) {
-            changeReplica();
-            return;
-        }
-        replica = processes[sourceNum];
-    }
     
     @Override
     protected void requestState() {
         if (tomLayer.requestsTimer != null)
         	tomLayer.requestsTimer.clearAll();
 
-        chooseReplicaFromConfig(); // always ask the complete state to a different replica
+        changeReplica(); // always ask the complete state to a different replica
         
         SMMessage smsg = new StandardSMMessage(SVController.getStaticConf().getProcessId(),
                 waitingCID, TOMUtil.SM_REQUEST, replica, null, null, -1, -1);

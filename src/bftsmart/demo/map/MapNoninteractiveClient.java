@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 public class MapNoninteractiveClient {
 
     private static volatile int count = 0;
-    private static int prev = 0;
+    private static volatile int prev = 0;
     private static volatile Logger logger = LoggerFactory.getLogger(MapNoninteractiveClient.class);
 
     public static void main(String[] args) {
