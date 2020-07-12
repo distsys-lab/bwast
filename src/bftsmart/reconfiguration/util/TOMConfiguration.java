@@ -25,7 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TOMConfiguration extends Configuration {
-    
+
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     protected int n;
@@ -42,7 +42,10 @@ public class TOMConfiguration extends Configuration {
     protected int outQueueSize;
     protected boolean shutdownHookEnabled;
     protected boolean useSenderThread;
-    protected int sourceNum;
+    protected String transferAlgorithm;
+    protected int[] sourceOrder;
+    protected int[] stateChunksNums;
+    protected int totalChunkNum;
     private int numNIOThreads;
     private int useMACs;
     private int useSignatures;
@@ -63,7 +66,7 @@ public class TOMConfiguration extends Configuration {
     private int numNettyWorkers;
     private boolean sameBatchSize;
     private String bindAddress;
-    
+
     /** Creates a new instance of TOMConfiguration */
     public TOMConfiguration(int processId, KeyLoader loader) {
         super(processId, loader);
@@ -136,7 +139,7 @@ public class TOMConfiguration extends Configuration {
                     timeoutHighMark = 1;
                 }
             }
-            
+
             s = (String) configs.remove("system.totalordermulticast.maxbatchsize");
             if (s == null) {
                 maxBatchSize = 100;
@@ -193,11 +196,40 @@ public class TOMConfiguration extends Configuration {
                 stateTransferEnabled = Boolean.parseBoolean(s);
             }
 
-            s = (String) configs.remove("system.totalordermulticast.source_num");
+            s = (String) configs.remove("system.totalordermulticast.transfer_algorithm");
             if (s == null) {
-                sourceNum = -1;
+                transferAlgorithm = "standard";
             } else {
-                sourceNum = Integer.parseInt(s);
+                transferAlgorithm = s;
+            }
+
+            s = (String) configs.remove("system.totalordermulticast.source_order");
+            if (s == null) {
+                sourceOrder = null;
+            } else {
+                StringTokenizer str = new StringTokenizer(s, ",");
+                sourceOrder = new int[str.countTokens()];
+                for (int i = 0; i < sourceOrder.length; i++) {
+                    sourceOrder[i] = Integer.parseInt(str.nextToken());
+                }
+            }
+
+            s = (String) configs.remove("system.totalordermulticast.state_chunks_nums");
+            if (s == null) {
+                stateChunksNums = null;
+            } else {
+                StringTokenizer str = new StringTokenizer(s, ",");
+                stateChunksNums = new int[str.countTokens()];
+                for (int i = 0; i < stateChunksNums.length; i++) {
+                    stateChunksNums[i] = Integer.parseInt(str.nextToken());
+                }
+            }
+
+            s = (String) configs.remove("system.totalordermulticast.total_chunk_num");
+            if (s == null) {
+                totalChunkNum = 0;
+            } else {
+                totalChunkNum = Integer.parseInt(s);
             }
 
             s = (String) configs.remove("system.totalordermulticast.checkpoint_period");
@@ -320,16 +352,16 @@ public class TOMConfiguration extends Configuration {
             } else {
                 numRepliers = Integer.parseInt(s);
             }
- 
+
             s = (String) configs.remove("system.numnettyworkers");
             if (s == null) {
                 numNettyWorkers = 0;
             } else {
                 numNettyWorkers = Integer.parseInt(s);
             }
-            
+
             s = (String) configs.remove("system.communication.bindaddress");
-            
+
             Pattern pattern = Pattern.compile("^(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])$");
 
             if (s == null || !pattern.matcher(s).matches()) {
@@ -337,14 +369,14 @@ public class TOMConfiguration extends Configuration {
             } else {
                 bindAddress = s;
             }
-            
+
             s = (String) configs.remove("system.samebatchsize");
             if (s != null) {
                     sameBatchSize = Boolean.parseBoolean(s);
             } else {
                     sameBatchSize = false;
             }
-            
+
         } catch (Exception e) {
             logger.error("Could not parse system configuration file",e);
         }
@@ -388,7 +420,7 @@ public class TOMConfiguration extends Configuration {
     public int getF() {
         return f;
     }
-    
+
     public int getPaxosHighMark() {
         return paxosHighMark;
     }
@@ -396,11 +428,11 @@ public class TOMConfiguration extends Configuration {
     public int getRevivalHighMark() {
         return revivalHighMark;
     }
-    
+
     public int getTimeoutHighMark() {
         return timeoutHighMark;
     }
-    
+
     public int getMaxBatchSize() {
         return maxBatchSize;
     }
@@ -413,9 +445,19 @@ public class TOMConfiguration extends Configuration {
         return stateTransferEnabled;
     }
 
-    public int getSourceNum() {
-        return sourceNum;
+    public String getTransferAlgorithm() {
+        return transferAlgorithm;
     }
+
+    public int[] getSourceOrder() {
+        return sourceOrder;
+    }
+
+    public int[] getNumbersOfStateChunks() {
+        return stateChunksNums;
+    }
+
+    public int getTotalNumberOfChunks() { return totalChunkNum; }
 
     public int getInQueueSize() {
         return inQueueSize;
@@ -465,7 +507,7 @@ public class TOMConfiguration extends Configuration {
 	public boolean isToWriteCkpsToDisk() {
 		return isToWriteCkpsToDisk;
 	}
-	
+
 	public boolean isToWriteSyncCkp() {
 		return syncCkp;
 	}
@@ -502,22 +544,22 @@ public class TOMConfiguration extends Configuration {
     }
 
     public boolean isBFT(){
-    	
+
     	return this.isBFT;
     }
 
     public int getNumRepliers() {
         return numRepliers;
     }
-    
+
     public int getNumNettyWorkers() {
         return numNettyWorkers;
     }
-    
+
     public boolean getSameBatchSize() {
         return sameBatchSize;
     }
-    
+
     public String getBindAddress() {
         return bindAddress;
     }

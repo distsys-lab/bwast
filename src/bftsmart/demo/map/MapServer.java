@@ -15,15 +15,19 @@ import java.util.logging.Logger;
 
 import bftsmart.tom.MessageContext;
 import bftsmart.tom.ServiceReplica;
-import bftsmart.tom.server.defaultservices.DefaultSingleRecoverable;
+import bftsmart.tom.server.defaultservices.ModifiedDefaultSingleRecoverable;
+import com.sun.source.tree.Tree;
 
-public class MapServer<K, V> extends DefaultSingleRecoverable {
+public class MapServer<K, V> extends ModifiedDefaultSingleRecoverable {
+
+	private int KEY_NUM = 500;
+	private int VALUE_SIZE = 1048576;
 
 	private Map<K, V> replicaMap;
 	private Logger logger;
 
 	public MapServer(int id) {
-		replicaMap = new TreeMap<>();
+		replicaMap = /*createInitialMap();*/new TreeMap<>();
 		logger = Logger.getLogger(MapServer.class.getName());
 		new ServiceReplica(id, this, this);
 	}
@@ -176,5 +180,23 @@ public class MapServer<K, V> extends DefaultSingleRecoverable {
 		} catch (IOException | ClassNotFoundException e) {
 			logger.log(Level.SEVERE, "Error while installing snapshot", e);
 		}
+	}
+
+	private TreeMap<K,V> createInitialMap() {
+		TreeMap<K,V> treeMap = new TreeMap<>();
+		for(int i = 0; i < KEY_NUM; i++) {
+			K key = (K)Integer.toString(i);
+			V value = (V)generateString(VALUE_SIZE);
+			treeMap.put(key, value);
+		}
+		return treeMap;
+	}
+
+	private static String generateString(int size) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < size; i++) {
+			sb.append('A');
+		}
+		return sb.toString();
 	}
 }
