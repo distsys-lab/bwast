@@ -42,17 +42,18 @@ public class DefaultApplicationState implements ApplicationState {
     protected boolean hasState; // indicates if the replica really had the requested state
 
     private CommandsInfo[] messageBatches; // batches received since the last checkpoint.
-    private int lastCheckpointCID; // Consensus ID for the last checkpoint
+    private final int lastCheckpointCID; // Consensus ID for the last checkpoint
     private byte[] logHash;
-    
-    private int pid;
+
+    private final int pid;
 
     /**
      * Constructs a TansferableState
      * This constructor should be used when there is a valid state to construct the object with
+     *
      * @param messageBatches Batches received since the last checkpoint.
-     * @param state State associated with the last checkpoint
-     * @param stateHash Hash of the state associated with the last checkpoint
+     * @param state          State associated with the last checkpoint
+     * @param stateHash      Hash of the state associated with the last checkpoint
      */
     public DefaultApplicationState(CommandsInfo[] messageBatches, int lastCheckpointCID, int lastCID, byte[] state, byte[] stateHash, int pid) {
        
@@ -83,8 +84,20 @@ public class DefaultApplicationState implements ApplicationState {
         this.hasState = false;
         this.pid = -1;
     }
-    
-    
+
+    // copy constructor
+    public DefaultApplicationState(DefaultApplicationState other) {
+        this.messageBatches = other.messageBatches;
+        this.lastCheckpointCID = other.lastCheckpointCID;
+        this.lastCID = other.lastCID;
+        this.state = other.state;
+        this.stateHash = other.stateHash;
+        this.hasState = other.hasState;
+        this.pid = other.pid;
+        this.logHash = other.logHash;
+    }
+
+
     @Override
     public void setSerializedState(byte[] state) {
         this.state = state;

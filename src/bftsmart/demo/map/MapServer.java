@@ -16,7 +16,6 @@ import java.util.logging.Logger;
 import bftsmart.tom.MessageContext;
 import bftsmart.tom.ServiceReplica;
 import bftsmart.tom.server.defaultservices.ModifiedDefaultSingleRecoverable;
-import com.sun.source.tree.Tree;
 
 public class MapServer<K, V> extends ModifiedDefaultSingleRecoverable {
 

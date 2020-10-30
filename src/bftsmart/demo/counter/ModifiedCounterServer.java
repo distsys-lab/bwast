@@ -1,4 +1,4 @@
-/**
+/*
 Copyright (c) 2007-2013 Alysson Bessani, Eduardo Alchieri, Paulo Sousa, and the authors indicated in the @author tags
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,27 +21,30 @@ import bftsmart.tom.server.defaultservices.ModifiedDefaultSingleRecoverable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Example replica that implements a BFT replicated service (a counter).
  * If the increment > 0 the counter is incremented, otherwise, the counter
  * value is read.
- * 
+ *
  * @author alysson
  */
 
 public final class ModifiedCounterServer extends ModifiedDefaultSingleRecoverable {
 
     private int counter = 0;
-    private int checkpointSize;
-    private static volatile Logger logger = LoggerFactory.getLogger(ModifiedCounterServer.class);
+    private static final Logger logger = LoggerFactory.getLogger(ModifiedCounterServer.class);
+    private final int checkpointSize;
     private int prev = 0;
     private int reqCount = 0;
 
@@ -96,8 +99,6 @@ public final class ModifiedCounterServer extends ModifiedDefaultSingleRecoverabl
         new ModifiedCounterServer(Integer.parseInt(args[0]), byteNumWithUnitToInt(args[1]));
     }
 
-    
-    @SuppressWarnings("unchecked")
     @Override
     public void installSnapshot(byte[] state) {
         // Install from Huge Snapshot
@@ -107,6 +108,7 @@ public final class ModifiedCounterServer extends ModifiedDefaultSingleRecoverabl
         } catch (Exception e) {
             System.err.println("[ERROR] Error deserializing state: "
                     + e.getMessage());
+            throw new RuntimeException("[ERROR] Error deserializing state", e);
         }
     }
 

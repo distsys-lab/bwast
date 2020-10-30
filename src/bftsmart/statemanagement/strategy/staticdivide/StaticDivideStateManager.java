@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package bftsmart.statemanagement.strategy.allocate;
+package bftsmart.statemanagement.strategy.staticdivide;
 
 import bftsmart.consensus.Consensus;
 import bftsmart.consensus.Epoch;
@@ -24,21 +24,20 @@ import bftsmart.statemanagement.ApplicationState;
 import bftsmart.statemanagement.SMMessage;
 import bftsmart.statemanagement.strategy.StandardSMMessage;
 import bftsmart.statemanagement.strategy.sort.SortStateManager;
-import bftsmart.tom.core.DeliveryThread;
-import bftsmart.tom.core.ExecutionManager;
-import bftsmart.tom.core.TOMLayer;
 import bftsmart.tom.leaderchange.CertifiedDecision;
 import bftsmart.tom.server.defaultservices.DefaultApplicationState;
 import bftsmart.tom.util.TOMUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.Arrays;
+import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
 
-public class AllocateStateManager extends SortStateManager {
+public class StaticDivideStateManager extends SortStateManager {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
     protected void requestState() {
@@ -57,7 +56,7 @@ public class AllocateStateManager extends SortStateManager {
         int chunksCount = 0;
         for (int id : SVController.getCurrentViewOtherAcceptors()) {
             int chunksNum = getStateChunksNum(id);
-            AllocateSMMessage msg = new AllocateSMMessage(SVController.getStaticConf().getProcessId(), waitingCID, TOMUtil.SM_REQUEST,
+            StaticDivideSMMessage msg = new StaticDivideSMMessage(SVController.getStaticConf().getProcessId(), waitingCID, TOMUtil.SM_REQUEST,
                     0, chunksCount, chunksCount + chunksNum - 1, null, null, -1, -1);
             chunksCount += chunksNum;
             tomLayer.getCommunication().send(new int[]{id}, msg);
@@ -109,7 +108,7 @@ public class AllocateStateManager extends SortStateManager {
 
     @Override
     public void SMRequestDeliver(SMMessage msg, boolean isBFT) {
-        if (!(msg instanceof AllocateSMMessage)) {
+        if (!(msg instanceof StaticDivideSMMessage)) {
             super.SMRequestDeliver(msg, isBFT);
             return;
         }
@@ -120,7 +119,7 @@ public class AllocateStateManager extends SortStateManager {
 
         logger.info("[Time] Send Reply Start: " + System.currentTimeMillis());
 
-        AllocateSMMessage alMsg = (AllocateSMMessage) msg;
+        StaticDivideSMMessage alMsg = (StaticDivideSMMessage) msg;
         int[] targets = {msg.getSender()};
         SMMessage replyMsg = buildReplySMMessage(alMsg);
         ApplicationState replyState = replyMsg.getState();
@@ -135,7 +134,7 @@ public class AllocateStateManager extends SortStateManager {
         logger.info("Sent");
     }
 
-    private SMMessage buildReplySMMessage(AllocateSMMessage reqMsg) {
+    private SMMessage buildReplySMMessage(StaticDivideSMMessage reqMsg) {
         ApplicationState thisState = dt.getRecoverer().getState(reqMsg.getCID(), true);
         if (thisState == null || thisState.getSerializedState() == null) {
             logger.warn("For some reason, I am sending a void state");
@@ -175,18 +174,18 @@ public class AllocateStateManager extends SortStateManager {
             endByte = stateSize;
         }
         thisState.setSerializedState(Arrays.copyOfRange(thisState.getSerializedState(), startByte, endByte));
-        return new AllocateSMMessage(SVController.getStaticConf().getProcessId(), reqMsg.getCID(), TOMUtil.SM_REPLY,
+        return new StaticDivideSMMessage(SVController.getStaticConf().getProcessId(), reqMsg.getCID(), TOMUtil.SM_REPLY,
                 stateSize, startChunk, endChunk, thisState, SVController.getCurrentView(),
                 tomLayer.getSynchronizer().getLCManager().getLastReg(), tomLayer.execManager.getCurrentLeader());
     }
 
     @Override
     public void SMReplyDeliver(SMMessage msg, boolean isBFT) {
-        if (!(msg instanceof AllocateSMMessage)) {
+        if (!(msg instanceof StaticDivideSMMessage)) {
             super.SMReplyDeliver(msg, isBFT);
             return;
         }
-        AllocateSMMessage alMsg = (AllocateSMMessage) msg;
+        StaticDivideSMMessage alMsg = (StaticDivideSMMessage) msg;
 
         logger.info("[Time] Receive State (" + (senderStates.size() + 1) + "/" + (SVController.getCurrentViewN() - 1) + "): " + System.currentTimeMillis());
 

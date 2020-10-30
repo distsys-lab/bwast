@@ -130,21 +130,11 @@ public class ViewManager {
     }
 
     public void sendResponse(Integer[] targets, VMMessage sm) {
-        ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-
-        try {
-            new ObjectOutputStream(bOut).writeObject(sm);
-        } catch (IOException ex) {
-            logger.error("Could not serialize message", ex);
-        }
-
-        byte[] data = bOut.toByteArray();
-
         for (Integer i : targets) {
             //br.ufsc.das.tom.util.Logger.println("(ServersCommunicationLayer.send) Sending msg to replica "+i);
             try {
                 if (i.intValue() != id) {
-                    getConnection(i.intValue()).send(data, true);
+                    getConnection(i.intValue()).send(sm, true);
                 }
             } catch (InterruptedException ex) {
                // ex.printStackTrace();

@@ -16,15 +16,21 @@ limitations under the License.
 package bftsmart.communication.server;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -43,6 +49,7 @@ import java.math.BigInteger;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashSet;
+import java.util.function.UnaryOperator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +75,7 @@ public class ServerConnection {
     private DataInputStream socketInStream = null;
     private int remoteId;
     private boolean useSenderThread;
-    protected LinkedBlockingQueue<byte[]> outQueue;// = new LinkedBlockingQueue<byte[]>(SEND_QUEUE_SIZE);
+    protected LinkedBlockingQueue<SystemMessage> outQueue;// = new LinkedBlockingQueue<byte[]>(SEND_QUEUE_SIZE);
     private HashSet<Integer> noMACs = null; // this is used to keep track of data to be sent without a MAC.
                                             // It uses the reference id for that same data
     private LinkedBlockingQueue<SystemMessage> inQueue;
@@ -77,9 +84,11 @@ public class ServerConnection {
     private Mac macReceive;
     private int macSize;
     private Lock connectLock = new ReentrantLock();
-    /** Only used when there is no sender Thread */
-    private Lock sendLock;
+    private Lock sendLock = new ReentrantLock();
     private boolean doWork = true;
+
+    /* traffic count */
+    private long traffic = -1;
 
     public ServerConnection(ServerViewController controller, Socket socket, int remoteId,
             LinkedBlockingQueue<SystemMessage> inQueue, ServiceReplica replica) {
@@ -92,7 +101,7 @@ public class ServerConnection {
 
         this.inQueue = inQueue;
 
-        this.outQueue = new LinkedBlockingQueue<byte[]>(this.controller.getStaticConf().getOutQueueSize());
+        this.outQueue = new LinkedBlockingQueue<>(this.controller.getStaticConf().getOutQueueSize());
 
         this.noMACs = new HashSet<Integer>();
         // Connect to the remote process or just wait for the connection?
@@ -115,19 +124,28 @@ public class ServerConnection {
         if (this.socket != null) {
             try {
                 socketOutStream = new DataOutputStream(this.socket.getOutputStream());
-                socketInStream = new DataInputStream(this.socket.getInputStream());
+                ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+                socketInStream = new DataInputStream(new TrafficCountInputStream(this.socket.getInputStream(),
+                        executor,
+                        "Server" + remoteId,
+                        this.controller.getStaticConf().getStateRequestInterval()
+                        ) {
+                    @Override
+                    void doNotify(String name, long traffic) {
+                        ServerConnection.this.traffic = traffic;
+                        logger.debug("[Traffic] "+ name + ": " + traffic);
+                    }
+                });
             } catch (IOException ex) {
                 logger.error("Error creating connection to "+remoteId,ex);
             }
         }
-               
-       //******* EDUARDO BEGIN **************//
+
+        //******* EDUARDO BEGIN **************//
         this.useSenderThread = this.controller.getStaticConf().isUseSenderThread();
 
         if (useSenderThread && (this.controller.getStaticConf().getTTPId() != remoteId)) {
             new SenderThread().start();
-        } else {
-            sendLock = new ReentrantLock();
         }
         authenticateAndEstablishAuthKey();
         
@@ -159,21 +177,40 @@ public class ServerConnection {
     /**
      * Used to send packets to the remote server.
      */
-    public final void send(byte[] data, boolean useMAC) throws InterruptedException {
+    public final void send(SystemMessage sm, boolean useMAC) throws InterruptedException {
         if (useSenderThread) {
             //only enqueue messages if there queue is not full
             if (!useMAC) {
-                logger.debug("Not sending defaultMAC " + System.identityHashCode(data));
+                ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+                try {
+                    new ObjectOutputStream(bOut).writeObject(sm);
+                } catch (IOException ex) {
+                    logger.error("Could not serialize message", ex);
+                    throw new RuntimeException("Could not serialize message", ex);
+                }
+                byte[] data = bOut.toByteArray();
+                logger.debug("Not sending defaultMAC " + System.identityHashCode(sm));
                 noMACs.add(System.identityHashCode(data));
             }
-
-            if (!outQueue.offer(data)) {
+            boolean successful = outQueue.offer(sm);
+            if (!successful) {
                 logger.debug("Out queue for " + remoteId + " full (message discarded).");
             }
         } else {
+            ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+            try {
+                new ObjectOutputStream(bOut).writeObject(sm);
+            } catch (IOException ex) {
+                logger.error("Could not serialize message", ex);
+                throw new RuntimeException("Could not serialize message", ex);
+            }
+            byte[] data = bOut.toByteArray();
             sendLock.lock();
-            sendBytes(data, useMAC);
-            sendLock.unlock();
+            try {
+                sendBytes(data, useMAC);
+            } finally {
+                sendLock.unlock();
+            }
         }
     }
 
@@ -304,7 +341,18 @@ public class ServerConnection {
             if (socket != null) {
                 try {
                     socketOutStream = new DataOutputStream(socket.getOutputStream());
-                    socketInStream = new DataInputStream(socket.getInputStream());
+                    ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+                    socketInStream = new DataInputStream(new TrafficCountInputStream(this.socket.getInputStream(),
+                            executor,
+                            "Server" + remoteId,
+                            1000
+                    ) {
+                        @Override
+                        void doNotify(String name, long traffic) {
+                            ServerConnection.this.traffic = traffic;
+                            logger.debug("[Traffic] "+ name + ": " + traffic);
+                        }
+                    });
                     
                     authKey = null;
                     authenticateAndEstablishAuthKey();
@@ -449,21 +497,34 @@ public class ServerConnection {
 
         @Override
         public void run() {
-            byte[] data = null;
+            SystemMessage sm = null;
 
             while (doWork) {
                 //get a message to be sent
                 try {
-                    data = outQueue.poll(POOL_TIME, TimeUnit.MILLISECONDS);
+                    sm = outQueue.poll(POOL_TIME, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException ex) {
                 }
+                ByteArrayOutputStream bOut = new ByteArrayOutputStream();
 
-                if (data != null) {
+                if (sm != null) {
+                    try {
+                        new ObjectOutputStream(bOut).writeObject(sm);
+                    } catch (IOException ex) {
+                        logger.error("Could not serialize message", ex);
+                        throw new RuntimeException("Could not serialize message", ex);
+                    }
+                    byte[] data = bOut.toByteArray();
                     //sendBytes(data, noMACs.contains(System.identityHashCode(data)));
                     int ref = System.identityHashCode(data);
                     boolean sendMAC = !noMACs.remove(ref);
                     logger.debug((sendMAC ? "Sending" : "Not sending") + " MAC for data " + ref);
-                    sendBytes(data, sendMAC);
+                    sendLock.lock();
+                    try {
+                        sendBytes(data, sendMAC);
+                    } finally {
+                        sendLock.unlock();
+                    }
                 }
             }
 
@@ -628,4 +689,17 @@ public class ServerConnection {
         }
     }
         //******* EDUARDO END **************//
+
+    public long getLastTraffic() {
+        return traffic;
+    }
+
+    public void modifyOutQueue(UnaryOperator<List<SystemMessage>> operator) {
+        sendLock.lock();
+        List<SystemMessage> list = new LinkedList<>();
+        outQueue.drainTo(list);
+        List<SystemMessage> newList = operator.apply(list);
+        outQueue.addAll(newList);
+        sendLock.unlock();
+    }
 }

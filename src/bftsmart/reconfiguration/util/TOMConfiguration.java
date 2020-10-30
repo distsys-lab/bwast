@@ -46,6 +46,7 @@ public class TOMConfiguration extends Configuration {
     protected int[] sourceOrder;
     protected int[] stateChunksNums;
     protected int totalChunkNum;
+    protected int stateRequestInterval;
     private int numNIOThreads;
     private int useMACs;
     private int useSignatures;
@@ -230,6 +231,13 @@ public class TOMConfiguration extends Configuration {
                 totalChunkNum = 0;
             } else {
                 totalChunkNum = Integer.parseInt(s);
+            }
+
+            s = (String) configs.remove("system.totalordermulticast.state_request_interval");
+            if (s == null) {
+                stateRequestInterval = 0;
+            } else {
+                stateRequestInterval = Integer.parseInt(s);
             }
 
             s = (String) configs.remove("system.totalordermulticast.checkpoint_period");
@@ -458,6 +466,8 @@ public class TOMConfiguration extends Configuration {
     }
 
     public int getTotalNumberOfChunks() { return totalChunkNum; }
+
+    public int getStateRequestInterval() { return stateRequestInterval; }
 
     public int getInQueueSize() {
         return inQueueSize;

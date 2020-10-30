@@ -1,18 +1,18 @@
 /**
-Copyright (c) 2007-2013 Alysson Bessani, Eduardo Alchieri, Paulo Sousa, and the authors indicated in the @author tags
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * Copyright (c) 2007-2013 Alysson Bessani, Eduardo Alchieri, Paulo Sousa, and the authors indicated in the @author tags
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package bftsmart.communication.server;
 
 import java.io.ByteArrayOutputStream;
@@ -23,9 +23,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.AbstractMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -34,9 +36,11 @@ import bftsmart.communication.SystemMessage;
 import bftsmart.reconfiguration.ServerViewController;
 import bftsmart.tom.ServiceReplica;
 import bftsmart.tom.util.TOMUtil;
+
 import java.net.InetAddress;
 import java.security.SecureRandom;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -46,11 +50,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * @author alysson
  */
 public class ServersCommunicationLayer extends Thread {
-    
+
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
 
@@ -69,7 +72,7 @@ public class ServersCommunicationLayer extends Thread {
     private static final String PASSWORD = "commsyst";
 
     public ServersCommunicationLayer(ServerViewController controller,
-            LinkedBlockingQueue<SystemMessage> inQueue, ServiceReplica replica) throws Exception {
+                                     LinkedBlockingQueue<SystemMessage> inQueue, ServiceReplica replica) throws Exception {
 
         this.controller = controller;
         this.inQueue = inQueue;
@@ -88,15 +91,13 @@ public class ServersCommunicationLayer extends Thread {
 
         String myAddress;
         String confAddress =
-                    controller.getStaticConf().getRemoteAddress(controller.getStaticConf().getProcessId()).getAddress().getHostAddress();
-        
+                controller.getStaticConf().getRemoteAddress(controller.getStaticConf().getProcessId()).getAddress().getHostAddress();
+
         if (InetAddress.getLoopbackAddress().getHostAddress().equals(confAddress)) {
-                            
+
             myAddress = InetAddress.getLoopbackAddress().getHostAddress();
 
-            }
-
-        else if (controller.getStaticConf().getBindAddress().equals("")) {
+        } else if (controller.getStaticConf().getBindAddress().equals("")) {
 
             myAddress = InetAddress.getLocalHost().getHostAddress();
 
@@ -112,9 +113,9 @@ public class ServersCommunicationLayer extends Thread {
 
             myAddress = controller.getStaticConf().getBindAddress();
         }
-        
+
         int myPort = controller.getStaticConf().getServerToServerPort(controller.getStaticConf().getProcessId());
-                        
+
         serverSocket = new ServerSocket(myPort, 50, InetAddress.getByName(myAddress));
 
         /*serverSocket = new ServerSocket(controller.getStaticConf().getServerToServerPort(
@@ -170,7 +171,7 @@ public class ServersCommunicationLayer extends Thread {
         connectionsLock.unlock();
     }
 
-    private ServerConnection getConnection(int remoteId) {
+    public ServerConnection getConnection(int remoteId) {
         connectionsLock.lock();
         ServerConnection ret = this.connections.get(remoteId);
         if (ret == null) {
@@ -191,8 +192,6 @@ public class ServersCommunicationLayer extends Thread {
             logger.error("Failed to serialize message", ex);
         }
 
-        byte[] data = bOut.toByteArray();
-
         for (int i : targets) {
             try {
                 if (i == me) {
@@ -202,19 +201,19 @@ public class ServersCommunicationLayer extends Thread {
                     //System.out.println("Going to send message to: "+i);
                     //******* EDUARDO BEGIN **************//
                     //connections[i].send(data);
-                    getConnection(i).send(data, useMAC);
+                    getConnection(i).send(sm, useMAC);
                     //******* EDUARDO END **************//
                 }
             } catch (InterruptedException ex) {
-                logger.error("Interruption while inserting message into inqueue",ex);
+                logger.error("Interruption while inserting message into inqueue", ex);
             }
         }
     }
 
     public void shutdown() {
-        
+
         logger.info("Shutting down replica sockets");
-        
+
         doWork = false;
 
         //******* EDUARDO BEGIN **************//
@@ -238,7 +237,7 @@ public class ServersCommunicationLayer extends Thread {
             try {
                 establishConnection(pc.s, pc.remoteId);
             } catch (Exception e) {
-                logger.error("Failed to estabilish connection to " + pc.remoteId,e);
+                logger.error("Failed to estabilish connection to " + pc.remoteId, e);
             }
         }
 
@@ -262,7 +261,7 @@ public class ServersCommunicationLayer extends Thread {
 
                 //******* EDUARDO BEGIN **************//
                 if (!this.controller.isInCurrentView() &&
-                     (this.controller.getStaticConf().getTTPId() != remoteId)) {
+                        (this.controller.getStaticConf().getTTPId() != remoteId)) {
                     waitViewLock.lock();
                     pendingConn.add(new PendingConnection(newSocket, remoteId));
                     waitViewLock.unlock();
@@ -272,7 +271,7 @@ public class ServersCommunicationLayer extends Thread {
                 //******* EDUARDO END **************//
 
             } catch (SocketTimeoutException ex) {
-            
+
                 logger.debug("Server socket timed out, retrying");
             } catch (IOException ex) {
                 logger.error("Problem during thread execution", ex);
@@ -314,7 +313,7 @@ public class ServersCommunicationLayer extends Thread {
         try {
             socket.setTcpNoDelay(true);
         } catch (SocketException ex) {
-            
+
             LoggerFactory.getLogger(ServersCommunicationLayer.class).error("Failed to set TCPNODELAY", ex);
         }
     }
@@ -354,4 +353,10 @@ public class ServersCommunicationLayer extends Thread {
     }
 
     //******* EDUARDO END **************//
+
+    public Map<Integer, Long> getTrafficOfConnections() {
+        return connections.entrySet().stream()
+                .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), e.getValue().getLastTraffic()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
 }

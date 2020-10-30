@@ -38,7 +38,7 @@
     <!-- To use async logging use ref="ASYNC" instead -->
 
   </root>
-  
+
   <logger name="bftsmart" level="INFO">
 
     <appender-ref ref="MIN-STDOUT" />

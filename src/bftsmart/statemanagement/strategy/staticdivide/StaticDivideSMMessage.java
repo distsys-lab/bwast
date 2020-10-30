@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package bftsmart.statemanagement.strategy.allocate;
+package bftsmart.statemanagement.strategy.staticdivide;
 
 import bftsmart.reconfiguration.views.View;
 import bftsmart.statemanagement.ApplicationState;
@@ -23,20 +23,20 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
-public class AllocateSMMessage extends SMMessage {
+public class StaticDivideSMMessage extends SMMessage {
 
     private int stateSize;
     private int startChunk;
     private int endChunk;
 
-    public AllocateSMMessage(int sender, int cid, int type, int stateSize, int startChunk, int endChunk, ApplicationState state, View view, int regency, int leader) {
+    public StaticDivideSMMessage(int sender, int cid, int type, int stateSize, int startChunk, int endChunk, ApplicationState state, View view, int regency, int leader) {
         super(sender, cid, type, state, view, regency, leader);
         this.stateSize = stateSize;
         this.startChunk = startChunk;
         this.endChunk = endChunk;
     }
 
-    public AllocateSMMessage() {
+    public StaticDivideSMMessage() {
         super();
     }
 

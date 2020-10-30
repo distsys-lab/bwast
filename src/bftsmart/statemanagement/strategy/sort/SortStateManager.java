@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2007-2013 Alysson Bessani, Eduardo Alchieri, Paulo Sousa, and the authors indicated in the @author tags
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,14 +33,20 @@ import bftsmart.tom.util.TOMUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Queue;
+import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class SortStateManager extends BaseStateManager {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private int replicaId = -1;
+    protected int replicaId = -1;
     private int replicaIndex = -1;
     protected ReentrantLock lockTimer = new ReentrantLock();
     protected Timer stateTimer = null;
@@ -400,9 +406,7 @@ public class SortStateManager extends BaseStateManager {
     protected ApplicationState getOtherReplicaState() {
         int[] processes = SVController.getCurrentViewProcesses();
         for (int process : processes) {
-            if (process == replicaId)
-                continue;
-            else {
+            if (process != replicaId) {
                 ApplicationState otherState = senderStates.get(process);
                 if (otherState != null)
                     return otherState;
@@ -412,7 +416,7 @@ public class SortStateManager extends BaseStateManager {
     }
 
     private int getNumEqualStates() {
-        List<ApplicationState> states = new ArrayList<ApplicationState>(receivedStates());
+        List<ApplicationState> states = new ArrayList<>(receivedStates());
         int match = 0;
         for (ApplicationState st1 : states) {
             int count = 0;

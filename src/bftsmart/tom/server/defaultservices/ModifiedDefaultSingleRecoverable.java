@@ -20,8 +20,9 @@ import bftsmart.reconfiguration.util.TOMConfiguration;
 import bftsmart.statemanagement.ApplicationState;
 import bftsmart.statemanagement.StateManager;
 import bftsmart.statemanagement.strategy.StandardStateManager;
-import bftsmart.statemanagement.strategy.allocate.AllocateStateManager;
+import bftsmart.statemanagement.strategy.dynamicdivide.DynamicDivideStateManager;
 import bftsmart.statemanagement.strategy.sort.SortStateManager;
+import bftsmart.statemanagement.strategy.staticdivide.StaticDivideStateManager;
 import bftsmart.tom.MessageContext;
 import bftsmart.tom.ReplicaContext;
 import bftsmart.tom.server.Recoverable;
@@ -40,20 +41,21 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * This class provides a basic state transfer protocol using the interface
  * 'SingleExecutable'.
+ *
  * @author Marcel Santos
  */
 public abstract class ModifiedDefaultSingleRecoverable implements Recoverable, SingleExecutable {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     protected ReplicaContext replicaContext;
     private TOMConfiguration config;
     private ServerViewController controller;
     private int checkpointPeriod;
 
-    private ReentrantLock logLock = new ReentrantLock();
-    private ReentrantLock hashLock = new ReentrantLock();
-    private ReentrantLock stateLock = new ReentrantLock();
+    private final ReentrantLock logLock = new ReentrantLock();
+    private final ReentrantLock hashLock = new ReentrantLock();
+    private final ReentrantLock stateLock = new ReentrantLock();
 
     private MessageDigest md;
 
@@ -275,7 +277,7 @@ public abstract class ModifiedDefaultSingleRecoverable implements Recoverable, S
 
     @Override
     public StateManager getStateManager() {
-        if(config != null) {
+        if (config != null) {
             getStateManager(config);
         }
         return stateManager;
@@ -287,8 +289,11 @@ public abstract class ModifiedDefaultSingleRecoverable implements Recoverable, S
                 case "sort":
                     stateManager = new SortStateManager();
                     break;
-                case "allocate":
-                    stateManager = new AllocateStateManager();
+                case "dynamic-divide":
+                    stateManager = new DynamicDivideStateManager();
+                    break;
+                case "static-divide":
+                    stateManager = new StaticDivideStateManager();
                     break;
                 default:
                     stateManager = new StandardStateManager();
@@ -333,12 +338,14 @@ public abstract class ModifiedDefaultSingleRecoverable implements Recoverable, S
 
     /**
      * Given a snapshot received from the state transfer protocol, install it
+     *
      * @param state The serialized snapshot
      */
     public abstract void installSnapshot(byte[] state);
 
     /**
      * Returns a serialized snapshot of the application state
+     *
      * @return A serialized snapshot of the application state
      */
     public abstract byte[] getSnapshot();
@@ -347,8 +354,7 @@ public abstract class ModifiedDefaultSingleRecoverable implements Recoverable, S
      * Execute a batch of ordered requests
      *
      * @param command The ordered request
-     * @param msgCtx The context associated to each request
-     *
+     * @param msgCtx  The context associated to each request
      * @return the reply for the request issued by the client
      */
     public abstract byte[] appExecuteOrdered(byte[] command, MessageContext msgCtx);
@@ -357,8 +363,7 @@ public abstract class ModifiedDefaultSingleRecoverable implements Recoverable, S
      * Execute an unordered request
      *
      * @param command The unordered request
-     * @param msgCtx The context associated to the request
-     *
+     * @param msgCtx  The context associated to the request
      * @return the reply for the request issued by the client
      */
     public abstract byte[] appExecuteUnordered(byte[] command, MessageContext msgCtx);
