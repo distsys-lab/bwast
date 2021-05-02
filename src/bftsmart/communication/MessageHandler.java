@@ -15,15 +15,20 @@ limitations under the License.
 */
 package bftsmart.communication;
 
-import bftsmart.consensus.messages.MessageFactory;
 import bftsmart.consensus.messages.ConsensusMessage;
+import bftsmart.consensus.messages.MessageFactory;
 import bftsmart.consensus.roles.Acceptor;
 import bftsmart.statemanagement.SMMessage;
 import bftsmart.tom.core.TOMLayer;
-import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.core.messages.ForwardedMessage;
+import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.leaderchange.LCMessage;
 import bftsmart.tom.util.TOMUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -31,10 +36,6 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashMap;
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
 
 /**
  *
@@ -42,7 +43,7 @@ import org.slf4j.Logger;
  */
 public class MessageHandler {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private Acceptor acceptor;
     private TOMLayer tomLayer;
@@ -151,19 +152,20 @@ public class MessageHandler {
 	
 	            /** This is Joao's code, to handle state transfer */
 	            } else if (sm instanceof SMMessage) {
-	                SMMessage smsg = (SMMessage) sm;
-	                // System.out.println("(MessageHandler.processData) SM_MSG received: type " + smsg.getType() + ", regency " + smsg.getRegency() + ", (replica " + smsg.getSender() + ")");
-	                switch(smsg.getType()) {
-	                    case TOMUtil.SM_REQUEST:
-		                    tomLayer.getStateManager().SMRequestDeliver(smsg, tomLayer.controller.getStaticConf().isBFT());
-	                        break;
-	                    case TOMUtil.SM_REPLY:
-		                    tomLayer.getStateManager().SMReplyDeliver(smsg, tomLayer.controller.getStaticConf().isBFT());
-	                        break;
-	                    case TOMUtil.SM_ASK_INITIAL:
-	                    	tomLayer.getStateManager().currentConsensusIdAsked(smsg.getSender());
-	                    	break;
-	                    case TOMUtil.SM_REPLY_INITIAL:
+                    SMMessage smsg = (SMMessage) sm;
+                    // System.out.println("(MessageHandler.processData) SM_MSG received: type " + smsg.getType() + ", regency " + smsg.getRegency() + ", (replica " + smsg.getSender() + ")");
+                    logger.info("chiba: type=" + smsg.getType());
+                    switch (smsg.getType()) {
+                        case TOMUtil.SM_REQUEST:
+                            tomLayer.getStateManager().SMRequestDeliver(smsg, tomLayer.controller.getStaticConf().isBFT());
+                            break;
+                        case TOMUtil.SM_REPLY:
+                            tomLayer.getStateManager().SMReplyDeliver(smsg, tomLayer.controller.getStaticConf().isBFT());
+                            break;
+                        case TOMUtil.SM_ASK_INITIAL:
+                            tomLayer.getStateManager().currentConsensusIdAsked(smsg.getSender());
+                            break;
+                        case TOMUtil.SM_REPLY_INITIAL:
 	                    	tomLayer.getStateManager().currentConsensusIdReceived(smsg);
 	                    	break;
 	                    default:

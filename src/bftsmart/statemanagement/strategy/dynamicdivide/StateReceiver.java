@@ -76,17 +76,21 @@ public class StateReceiver {
 
         Map<Integer, BitSet> chunkIdsMap = initialDivideRequestChunkIds();
         for (Map.Entry<Integer, BitSet> chunkIdsEntry : chunkIdsMap.entrySet()) {
+            logger.info("[updateSendRequest] sendRequestMessage start: " + System.currentTimeMillis());
             sendRequestMessage(chunkIdsEntry.getKey(), chunkIdsEntry.getValue(), true);
+            logger.info("[updateSendRequest] sendRequestMessage end: " + System.currentTimeMillis());
         }
         trafficTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
+                logger.info("[updateSendRequest] sendRequestMessage start: " + System.currentTimeMillis());
                 Map<Integer, Long> trafficOfConnections = tomLayer.getCommunication().getServersConn().getTrafficOfConnections();
                 logger.info("[TrafficTimer] traffic: " + trafficOfConnections);
                 Map<Integer, BitSet> chunkIdsMap = divideRequestChunkIds(trafficOfConnections);
                 for (Map.Entry<Integer, BitSet> chunkIdsEntry : chunkIdsMap.entrySet()) {
                     sendRequestMessage(chunkIdsEntry.getKey(), chunkIdsEntry.getValue(), false);
                 }
+                logger.info("[updateSendRequest] sendRequestMessage end: " + System.currentTimeMillis());
             }
         }, requestInterval, requestInterval);
     }

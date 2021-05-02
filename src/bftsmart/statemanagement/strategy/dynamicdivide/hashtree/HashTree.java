@@ -35,7 +35,8 @@ public class HashTree {
         int chunkSize = state.length / (chunkNum - 1);
         List<HashTreeNode> nodeList = new LinkedList<>();
         IntStream.range(0, chunkNum).forEach(i -> {
-            byte[] hash = md.digest(StateSender.buildStateChunk(i, chunkNum, chunkSize, state));
+            md.update(StateSender.buildStateChunkBuffer(i, chunkNum, chunkSize, state));
+            byte[] hash = md.digest();
             nodeList.add(new HashTreeNode(hash, hashIds.get(i), null, null));
         });
         HashTreeNode root = HashTreeNode.generateHashTree(nodeList);

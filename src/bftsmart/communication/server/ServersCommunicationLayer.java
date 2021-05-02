@@ -15,15 +15,27 @@
  */
 package bftsmart.communication.server;
 
+import bftsmart.communication.SystemMessage;
+import bftsmart.reconfiguration.ServerViewController;
+import bftsmart.tom.ServiceReplica;
+import bftsmart.tom.util.TOMUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.AbstractMap;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,44 +43,28 @@ import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import bftsmart.communication.SystemMessage;
-import bftsmart.reconfiguration.ServerViewController;
-import bftsmart.tom.ServiceReplica;
-import bftsmart.tom.util.TOMUtil;
-
-import java.net.InetAddress;
-import java.security.SecureRandom;
-import java.util.HashMap;
 import java.util.stream.Collectors;
-
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author alysson
  */
 public class ServersCommunicationLayer extends Thread {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
 
-    private ServerViewController controller;
-    private LinkedBlockingQueue<SystemMessage> inQueue;
-    private HashMap<Integer, ServerConnection> connections = new HashMap<>();
-    private ServerSocket serverSocket;
-    private int me;
+    private final ServerViewController controller;
+    private final LinkedBlockingQueue<SystemMessage> inQueue;
+    private final HashMap<Integer, ServerConnection> connections = new HashMap<>();
+    private final ServerSocket serverSocket;
+    private final int me;
     private boolean doWork = true;
-    private Lock connectionsLock = new ReentrantLock();
-    private ReentrantLock waitViewLock = new ReentrantLock();
+    private final Lock connectionsLock = new ReentrantLock();
+    private final ReentrantLock waitViewLock = new ReentrantLock();
     //private Condition canConnect = waitViewLock.newCondition();
-    private List<PendingConnection> pendingConn = new LinkedList<PendingConnection>();
-    private ServiceReplica replica;
-    private SecretKey selfPwd;
+    private final List<PendingConnection> pendingConn = new LinkedList<PendingConnection>();
+    private final ServiceReplica replica;
+    private final SecretKey selfPwd;
     private static final String PASSWORD = "commsyst";
 
     public ServersCommunicationLayer(ServerViewController controller,
@@ -205,7 +201,7 @@ public class ServersCommunicationLayer extends Thread {
                     //******* EDUARDO END **************//
                 }
             } catch (InterruptedException ex) {
-                logger.error("Interruption while inserting message into inqueue", ex);
+                logger.error("Interruption while inserting message into inQueue", ex);
             }
         }
     }

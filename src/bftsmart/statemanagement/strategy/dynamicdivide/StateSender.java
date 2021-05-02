@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.List;
 import java.util.function.UnaryOperator;
@@ -38,8 +39,7 @@ public class StateSender {
         this.state = new DefaultApplicationState(state);
         this.replicaId = replicaId;
     }
-
-    public static byte[] buildStateChunk(int chunkId, int totalChunkNum, int normalChunkSize, byte[] state) {
+    public static ByteBuffer buildStateChunkBuffer(int chunkId, int totalChunkNum, int normalChunkSize, byte[] state) {
         int lastChunk = totalChunkNum - 1;
         int lastChunkSize = state.length - ((totalChunkNum - 1) * normalChunkSize);
         int chunkSize;
@@ -48,10 +48,7 @@ public class StateSender {
         } else {
             chunkSize = lastChunkSize;
         }
-        int id = 0;
-        byte[] chunk = new byte[chunkSize];
-        System.arraycopy(state, id * normalChunkSize, chunk, 0, chunkSize);
-        return chunk;
+        return ByteBuffer.wrap(state, chunkId * normalChunkSize, chunkSize).slice();
     }
 
     private static int sizeof(Object obj) throws IOException {
@@ -67,11 +64,13 @@ public class StateSender {
     }
 
     public void update(int serverId, BitSet chunkIds, BitSet hashIds, int cid) {
+        logger.info("[updateSendRequest] updateReplyMessage start: " + System.currentTimeMillis());
         ServerConnection connection = tomLayer.getCommunication().getServersConn().getConnection(serverId);
         logStateSize(state);
         connection.modifyOutQueue(buildSendQueueUpdater(chunkIds, hashIds, cid, state));
         logger.info("[Time] Update Replies End: " + System.currentTimeMillis());
         logger.info("Updated");
+        logger.info("[updateSendRequest] updateReplyMessage end: " + System.currentTimeMillis());
     }
 
     public int getCID() {
@@ -89,7 +88,7 @@ public class StateSender {
             addedChunkIds.xor(intersection);
             BitSet removedChunkIds = (BitSet) sendingChunkIds.clone();
             removedChunkIds.xor(intersection);
-
+            logger.info("size of replies (before update): " + messages.stream().filter(x -> x instanceof DynamicDivideSMReplyMessage).count());
             messages.removeAll(dynamicDivideMessages.stream().filter(reply -> removedChunkIds.get(reply.getChunkId())).collect(Collectors.toList()));
             messages.addAll(addedChunkIds.stream().mapToObj(chunkId -> buildChunkMessage(chunkId, cid)).collect(Collectors.toList()));
             List<DynamicDivideSMReplyMessage> updatedDynamicDivideMessages = messages.stream().filter(x -> x instanceof DynamicDivideSMReplyMessage).map(x -> (DynamicDivideSMReplyMessage) x).collect(Collectors.toList());
@@ -108,8 +107,7 @@ public class StateSender {
                 DynamicDivideSMReplyMessage messageWithHash = new DynamicDivideSMReplyMessage(head, stateWithMessageBatches, hashIds, hashTree);
                 messages.set(messages.indexOf(head), messageWithHash);
             }
-            logger.info("size of messages: " + messages.size());
-            logger.info("size of replies: " + updatedDynamicDivideMessages.size());
+            logger.info("size of replies (after update): " + updatedDynamicDivideMessages.size());
             return messages;
         };
     }
@@ -138,8 +136,8 @@ public class StateSender {
         int stateSize = state.getSerializedState().length;
         int totalChunksNum = SVController.getStaticConf().getTotalNumberOfChunks();
         int chunkSize = stateSize / (totalChunksNum - 1);
-        byte[] chunk = buildStateChunk(chunkId, totalChunksNum, chunkSize, state.getSerializedState());
-        ApplicationState newState = new ChunkApplicationState(chunk);
+        ByteBuffer chunkBuffer = buildStateChunkBuffer(chunkId, totalChunksNum, chunkSize, state.getSerializedState());
+        ApplicationState newState = new ChunkApplicationState(chunkBuffer);
         return new DynamicDivideSMReplyMessage(SVController.getStaticConf().getProcessId(), cid, TOMUtil.SM_REPLY,
                 replicaId, chunkId, null, null, newState, SVController.getCurrentView(),
                 tomLayer.getSynchronizer().getLCManager().getLastReg(), tomLayer.execManager.getCurrentLeader());

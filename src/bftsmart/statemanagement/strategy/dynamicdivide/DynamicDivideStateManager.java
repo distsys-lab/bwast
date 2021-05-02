@@ -63,6 +63,7 @@ public class DynamicDivideStateManager extends SortStateManager {
             return;
         }
 
+        logger.info("[Time] Request State Transfer Start: " + System.currentTimeMillis());
         stateReceiver = new StateReceiver(tomLayer, SVController, replicaId, waitingCID);
 
         TimerTask stateTask = new TimerTask() {
@@ -139,7 +140,7 @@ public class DynamicDivideStateManager extends SortStateManager {
         DynamicDivideSMReplyMessage alMsg = (DynamicDivideSMReplyMessage) msg;
         long b = System.nanoTime();
 
-        //logger.debug("receive chunk id = " + alMsg.getChunkId());
+        logger.debug("chiba: receive chunk id = " + alMsg.getChunkId());
         lockTimer.lock();
         if (!SVController.getStaticConf().isStateTransferEnabled()) {
             logger.debug("guarded due to isStateTransferEnabled() is false");
@@ -184,11 +185,6 @@ public class DynamicDivideStateManager extends SortStateManager {
         if (!stateReceiver.isReceivedAllChunks()) {
             return;
         }
-        logger.debug("A to B: " + timeLog.get(0));
-        logger.debug("B to C: " + timeLog.get(1));
-        logger.debug("C to D: " + timeLog.get(2));
-        logger.debug("D to E: " + timeLog.get(3));
-        logger.debug("E to A: " + timeLog.get(4));
 
         if (state == null) {
             state = stateReceiver.getState();
