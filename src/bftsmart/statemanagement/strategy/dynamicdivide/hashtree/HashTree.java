@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -30,15 +31,24 @@ public class HashTree {
         this.md = getMessageDigest();
     }
 
-    public static byte[] generatePrunedTree(byte[] state, BitSet hashIds, int chunkNum) {
+    public static List<byte[]> calcStateHashes(byte[] state, int chunkNum) {
         MessageDigest md = getMessageDigest();
         int chunkSize = state.length / (chunkNum - 1);
-        List<HashTreeNode> nodeList = new LinkedList<>();
-        IntStream.range(0, chunkNum).forEach(i -> {
+        List<byte[]> stateHashes = new ArrayList<>(chunkNum);
+        IntStream.range(0, chunkNum).forEachOrdered(i -> {
             md.update(StateSender.buildStateChunkBuffer(i, chunkNum, chunkSize, state));
-            byte[] hash = md.digest();
-            nodeList.add(new HashTreeNode(hash, hashIds.get(i), null, null));
+            stateHashes.add(md.digest());
         });
+        return stateHashes;
+    }
+
+    public static byte[] generatePrunedTree(List<byte[]> stateHashes, BitSet hashIds) {
+        List<HashTreeNode> nodeList = new LinkedList<>();
+        int i = 0;
+        for (byte[] hash : stateHashes) {
+            nodeList.add(new HashTreeNode(hash, hashIds.get(i), null, null));
+            i++;
+        }
         HashTreeNode root = HashTreeNode.generateHashTree(nodeList);
         root.prune();
         return root.toByteArray();

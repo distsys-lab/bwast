@@ -15,33 +15,33 @@ limitations under the License.
 */
 package bftsmart.tom.leaderchange;
 
-import bftsmart.communication.server.ServerConnection;
-import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.SignedObject;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import bftsmart.consensus.TimestampValuePair;
 import bftsmart.consensus.messages.ConsensusMessage;
 import bftsmart.reconfiguration.ServerViewController;
 import bftsmart.tom.core.TOMLayer;
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.util.TOMUtil;
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.util.LinkedList;
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.NotSerializableException;
+import java.io.ObjectOutputStream;
+import java.security.InvalidKeyException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.SignedObject;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
  */
 public class LCManager {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     
     //timestamp info
     private int lastreg;
@@ -64,21 +64,21 @@ public class LCManager {
 
     //requests received in STOP messages
     private List<TOMMessage> requestsFromSTOP = null;
-    
+
     //data structures for info in stop, sync and catch-up messages
-    private HashMap<Integer,HashSet<Integer>> stops;
-    private HashMap<Integer,HashSet<CertifiedDecision>> lastCIDs;
-    private HashMap<Integer,HashSet<SignedObject>> collects;
+    private final HashMap<Integer, HashSet<Integer>> stops;
+    private final HashMap<Integer, HashSet<CertifiedDecision>> lastCIDs;
+    private final HashMap<Integer, HashSet<SignedObject>> collects;
 
     //stuff from the TOM layer that this object needss
-    private ServerViewController SVController;
-    private MessageDigest md;
-    private TOMLayer tomLayer;
-    
+    private final ServerViewController SVController;
+    private final MessageDigest md;
+    private final TOMLayer tomLayer;
+
     private int currentLeader;
     //private Cipher cipher;
     private Mac mac;
-    
+
     /**
      * Constructor
      *
@@ -819,23 +819,27 @@ public class LCManager {
         HashSet<Integer> alreadyCounted = new HashSet<>(); //stores replica IDs that were already counted
             
         for (ConsensusMessage consMsg : ConsensusMessages) {
-            
-            ConsensusMessage cm = new ConsensusMessage(consMsg.getType(),consMsg.getNumber(),
+
+            ConsensusMessage cm = new ConsensusMessage(consMsg.getType(), consMsg.getNumber(),
                     consMsg.getEpoch(), consMsg.getSender(), consMsg.getValue());
 
             ByteArrayOutputStream bOut = new ByteArrayOutputStream(248);
-            try {
-                new ObjectOutputStream(bOut).writeObject(cm);
+            byte[] data;
+            try (ObjectOutputStream oos = new ObjectOutputStream(bOut)) {
+                oos.writeObject(cm);
+                data = bOut.toByteArray();
+            } catch (InvalidClassException | NotSerializableException ex) {
+                logger.error("Failed to serialize message", ex);
+                throw new RuntimeException(ex);
             } catch (IOException ex) {
-                logger.error("Could not serialize message",ex);
+                // never happen
+                throw new RuntimeException(ex);
             }
 
-            byte[] data = bOut.toByteArray();
-
             if (consMsg.getProof() instanceof HashMap) { // Certificate is made of MAC vector
-                
+
                 logger.debug("Proof made of MAC vector");
-            
+
                 HashMap<Integer, byte[]> macVector = (HashMap<Integer, byte[]>) consMsg.getProof();
                                
                 byte[] recvMAC = macVector.get(myId);

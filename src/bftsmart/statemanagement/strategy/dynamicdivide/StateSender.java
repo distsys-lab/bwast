@@ -24,11 +24,12 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 public class StateSender {
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(StateSender.class);
     private final TOMLayer tomLayer;
     private final ServerViewController SVController;
     private final DefaultApplicationState state;
     private final int replicaId;
+    private final List<byte[]> stateHashes;
 
     public StateSender(TOMLayer tomLayer,
                        ServerViewController SVController,
@@ -38,6 +39,8 @@ public class StateSender {
         this.SVController = SVController;
         this.state = new DefaultApplicationState(state);
         this.replicaId = replicaId;
+        int totalChunkNum = SVController.getStaticConf().getTotalNumberOfChunks();
+        this.stateHashes = HashTree.calcStateHashes(state.getSerializedState(), totalChunkNum);
     }
     public static ByteBuffer buildStateChunkBuffer(int chunkId, int totalChunkNum, int normalChunkSize, byte[] state) {
         int lastChunk = totalChunkNum - 1;
@@ -53,14 +56,16 @@ public class StateSender {
 
     private static int sizeof(Object obj) throws IOException {
 
-        ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
-        ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteOutputStream);
-
-        objectOutputStream.writeObject(obj);
-        objectOutputStream.flush();
-        objectOutputStream.close();
-
-        return byteOutputStream.toByteArray().length;
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        int length;
+        try (ObjectOutputStream oos = new ObjectOutputStream(bos)) {
+            oos.writeObject(obj);
+            length = bos.toByteArray().length;
+        } catch (IOException e) {
+            // never happen
+            throw new RuntimeException(e);
+        }
+        return length;
     }
 
     public void update(int serverId, BitSet chunkIds, BitSet hashIds, int cid) {
@@ -93,8 +98,7 @@ public class StateSender {
             messages.addAll(addedChunkIds.stream().mapToObj(chunkId -> buildChunkMessage(chunkId, cid)).collect(Collectors.toList()));
             List<DynamicDivideSMReplyMessage> updatedDynamicDivideMessages = messages.stream().filter(x -> x instanceof DynamicDivideSMReplyMessage).map(x -> (DynamicDivideSMReplyMessage) x).collect(Collectors.toList());
             if (hashIds != null) {
-                int totalChunkNum = SVController.getStaticConf().getTotalNumberOfChunks();
-                byte[] hashTree = HashTree.generatePrunedTree(state.getSerializedState(), hashIds, totalChunkNum);
+                byte[] hashTree = HashTree.generatePrunedTree(stateHashes, hashIds);
                 DynamicDivideSMReplyMessage head;
                 if (updatedDynamicDivideMessages.isEmpty()) {
                     head = buildChunkMessage(0, cid);

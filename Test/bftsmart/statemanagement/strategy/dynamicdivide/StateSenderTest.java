@@ -4,6 +4,7 @@ import bftsmart.communication.SystemMessage;
 import bftsmart.reconfiguration.views.View;
 import bftsmart.statemanagement.ApplicationState;
 import bftsmart.statemanagement.strategy.dynamicdivide.hashtree.HashTree;
+import bftsmart.statemanagement.strategy.dynamicdivide.hashtree.HashTreeNode;
 import bftsmart.tom.server.defaultservices.DefaultApplicationState;
 import bftsmart.tom.util.TOMUtil;
 import org.junit.jupiter.api.Assertions;
@@ -30,10 +31,29 @@ class StateSenderTest {
     int cid = 1;
     int stateNumber = 123;
     int stateSize = 100 * 1024 * 1024;
+    List<byte[]> stateHashes;
     DefaultApplicationState state = new DefaultApplicationState();
-    BitSet hashIds = null;
     List<Integer> oldQueueNodeIds = Arrays.asList(2, 4, 5, 6, 7, 8, 11, 13, 15, 16, 18, 20, 21, 27, 30, 31, 32, 34, 35, 37, 42, 47, 51, 57, 60, 62, 63, 66, 68, 70, 72, 74, 78, 80, 87, 89, 91, 92, 93, 94, 98, 100, 101, 105, 107, 109, 110, 111, 113, 115, 119, 123, 124, 125, 130, 131, 132, 137, 138, 139, 146, 147, 148, 153, 158, 160, 164, 168, 173, 175, 176, 177, 180, 181, 182, 186, 190, 194, 196, 198, 199, 201, 205, 207, 215, 217, 218, 220, 221, 224, 228, 230, 232, 235, 236, 237, 243, 246, 248, 253);
     List<Integer> newQueueNodeIds = Arrays.asList(0, 1, 2, 3, 4, 7, 10, 15, 16, 17, 18, 20, 21, 26, 27, 28, 31, 33, 38, 40, 41, 45, 48, 53, 54, 55, 56, 62, 63, 64, 66, 73, 77, 79, 85, 87, 90, 94, 95, 98, 101, 103, 104, 105, 106, 114, 117, 118, 123, 125, 127, 130, 135, 141, 142, 153, 157, 158, 164, 165, 166, 167, 174, 175, 177, 178, 182, 183, 185, 186, 187, 193, 194, 196, 201, 202, 203, 204, 205, 208, 211, 212, 214, 215, 216, 217, 220, 223, 227, 230, 242, 243, 244, 247, 249, 250, 251, 252, 253, 254);
+
+
+    public static byte[] generatePrunedTree(List<byte[]> stateHashes, BitSet hashIds) {
+        System.out.println("A: " + System.currentTimeMillis());
+        List<HashTreeNode> nodeList = new LinkedList<>();
+        System.out.println("B: " + System.currentTimeMillis());
+        int i = 0;
+        System.out.println("C: " + System.currentTimeMillis());
+        for (byte[] hash : stateHashes) {
+            nodeList.add(new HashTreeNode(hash, hashIds.get(i), null, null));
+            i++;
+        }
+        System.out.println("D: " + System.currentTimeMillis());
+        HashTreeNode root = HashTreeNode.generateHashTree(nodeList);
+        System.out.println("E: " + System.currentTimeMillis());
+        root.prune();
+        System.out.println("F: " + System.currentTimeMillis());
+        return root.toByteArray();
+    }
 
     public static ByteBuffer buildStateChunkBuffer(int chunkId, int totalChunkNum, int normalChunkSize, byte[] state) {
         int lastChunk = totalChunkNum - 1;
@@ -54,13 +74,20 @@ class StateSenderTest {
         // set serialized state
         byte[] serializedState = createHugeSnapshot(stateNumber, stateSize);
         state.setSerializedState(serializedState);
+        stateHashes = HashTree.calcStateHashes(state.getSerializedState(), totalChunksNum);
 
         // set out queue's contents
-        oldQueueNodeIds.forEach(x -> outQueue.add(buildChunkMessage(x, cid)));
+        BitSet oldQueueChunkIds = new BitSet();
+        oldQueueNodeIds.forEach(oldQueueChunkIds::set);
+        BitSet oldQueueHashIds = new BitSet();
+        oldQueueNodeIds.forEach(oldQueueHashIds::set);
+        modifyOutQueue(buildSendQueueUpdater(oldQueueChunkIds, oldQueueHashIds, cid, state));
 
         // set send request's order
         BitSet chunkIds = new BitSet();
         newQueueNodeIds.forEach(chunkIds::set);
+        BitSet hashIds = new BitSet();
+        newQueueNodeIds.forEach(hashIds::set);
         System.out.println(System.currentTimeMillis());
         Assertions.assertTimeout(Duration.ofMillis(10), () -> modifyOutQueue(buildSendQueueUpdater(chunkIds, hashIds, cid, state)));
         System.out.println(System.currentTimeMillis());
@@ -89,8 +116,7 @@ class StateSenderTest {
             messages.addAll(addedChunkIds.stream().mapToObj(chunkId -> buildChunkMessage(chunkId, cid)).collect(Collectors.toList()));
             List<DynamicDivideSMReplyMessage> updatedDynamicDivideMessages = messages.stream().filter(x -> x instanceof DynamicDivideSMReplyMessage).map(x -> (DynamicDivideSMReplyMessage) x).collect(Collectors.toList());
             if (hashIds != null) {
-                int totalChunkNum = getTotalNumberOfChunks();
-                byte[] hashTree = HashTree.generatePrunedTree(state.getSerializedState(), hashIds, totalChunkNum);
+                byte[] hashTree = generatePrunedTree(stateHashes, hashIds);
                 DynamicDivideSMReplyMessage head;
                 if (updatedDynamicDivideMessages.isEmpty()) {
                     head = buildChunkMessage(0, cid);

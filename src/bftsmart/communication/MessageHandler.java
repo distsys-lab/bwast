@@ -74,26 +74,27 @@ public class MessageHandler {
 
             if (tomLayer.controller.getStaticConf().getUseMACs() == 0 || consMsg.authenticated || consMsg.getSender() == myId) acceptor.deliver(consMsg);
             else if (consMsg.getType() == MessageFactory.ACCEPT && consMsg.getProof() != null) {
-                                        
+
                 //We are going to verify the MAC vector at the algorithm level
                 HashMap<Integer, byte[]> macVector = (HashMap<Integer, byte[]>) consMsg.getProof();
-                               
+
                 byte[] recvMAC = macVector.get(myId);
-                
-                ConsensusMessage cm = new ConsensusMessage(MessageFactory.ACCEPT,consMsg.getNumber(),
+
+                ConsensusMessage cm = new ConsensusMessage(MessageFactory.ACCEPT, consMsg.getNumber(),
                         consMsg.getEpoch(), consMsg.getSender(), consMsg.getValue());
-                
+
                 ByteArrayOutputStream bOut = new ByteArrayOutputStream(248);
-                try {
-                    new ObjectOutputStream(bOut).writeObject(cm);
+                byte[] data;
+                try (ObjectOutputStream oos = new ObjectOutputStream(bOut)) {
+                    oos.writeObject(cm);
+                    data = bOut.toByteArray();
                 } catch (IOException ex) {
-                    logger.error("Failed to serialize consensus message",ex);
+                    logger.error("Failed to serialize consensus message", ex);
+                    throw new RuntimeException(ex);
                 }
 
-                byte[] data = bOut.toByteArray();
-        
                 //byte[] hash = tomLayer.computeHash(data); 
-                
+
                 byte[] myMAC = null;
                 
                 /*byte[] k = tomLayer.getCommunication().getServersConn().getSecretKey(paxosMsg.getSender()).getEncoded();

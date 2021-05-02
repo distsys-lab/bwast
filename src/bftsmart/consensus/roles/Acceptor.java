@@ -16,33 +16,33 @@ limitations under the License.
 package bftsmart.consensus.roles;
 
 
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-
 import bftsmart.communication.ServerCommunicationSystem;
-import bftsmart.communication.server.ServerConnection;
 import bftsmart.consensus.Consensus;
-import bftsmart.tom.core.ExecutionManager;
 import bftsmart.consensus.Epoch;
-import bftsmart.consensus.messages.MessageFactory;
 import bftsmart.consensus.messages.ConsensusMessage;
+import bftsmart.consensus.messages.MessageFactory;
 import bftsmart.reconfiguration.ServerViewController;
+import bftsmart.tom.core.ExecutionManager;
 import bftsmart.tom.core.TOMLayer;
 import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.core.messages.TOMMessageType;
 import bftsmart.tom.util.TOMUtil;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.security.PrivateKey;
-import java.util.HashMap;
-import java.util.LinkedList;
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.NotSerializableException;
+import java.io.ObjectOutputStream;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
 
 /**
  * This class represents the acceptor role in the consensus protocol.
@@ -52,15 +52,15 @@ import org.slf4j.LoggerFactory;
  * @author Alysson Bessani
  */
 public final class Acceptor {
-    
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private int me; // This replica ID
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    private final int me; // This replica ID
     private ExecutionManager executionManager; // Execution manager of consensus's executions
-    private MessageFactory factory; // Factory for PaW messages
-    private ServerCommunicationSystem communication; // Replicas comunication system
+    private final MessageFactory factory; // Factory for PaW messages
+    private final ServerCommunicationSystem communication; // Replicas comunication system
     private TOMLayer tomLayer; // TOM layer
-    private ServerViewController controller;
+    private final ServerViewController controller;
     //private Cipher cipher;
     private Mac mac;
 
@@ -313,13 +313,17 @@ public final class Acceptor {
      */
     private void insertProof(ConsensusMessage cm, Epoch epoch) {
         ByteArrayOutputStream bOut = new ByteArrayOutputStream(248);
-        try {
-            new ObjectOutputStream(bOut).writeObject(cm);
+        byte[] data;
+        try (ObjectOutputStream oos = new ObjectOutputStream(bOut)) {
+            oos.writeObject(cm);
+            data = bOut.toByteArray();
+        } catch (InvalidClassException | NotSerializableException ex) {
+            logger.error("Failed to serialize message", ex);
+            throw new RuntimeException(ex);
         } catch (IOException ex) {
-            logger.error("Failed to serialize consensus message",ex);
+            // never happen
+            throw new RuntimeException(ex);
         }
-
-        byte[] data = bOut.toByteArray();
 
         // check if consensus contains reconfiguration request
         TOMMessage[] msgs = epoch.deserializedPropValue;

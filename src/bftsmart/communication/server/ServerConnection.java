@@ -182,34 +182,27 @@ public class ServerConnection {
      * Used to send packets to the remote server.
      */
     public final void send(SystemMessage sm, boolean useMAC) throws InterruptedException {
+        ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+        byte[] data;
+        try (ObjectOutputStream oos = new ObjectOutputStream(bOut)) {
+            oos.writeObject(sm);
+            data = bOut.toByteArray();
+        } catch (IOException ex) {
+            logger.error("Could not serialize message", ex);
+            throw new RuntimeException("Could not serialize message", ex);
+        }
+
         if (useSenderThread) {
             //only enqueue messages if there queue is not full
             if (!useMAC) {
-                ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-                try {
-                    new ObjectOutputStream(bOut).writeObject(sm);
-                } catch (IOException ex) {
-                    logger.error("Could not serialize message", ex);
-                    throw new RuntimeException("Could not serialize message", ex);
-                }
-                byte[] data = bOut.toByteArray();
                 logger.debug("Not sending defaultMAC " + System.identityHashCode(sm));
                 noMACs.add(System.identityHashCode(data));
             }
-
             boolean successful = outQueue.offer(sm);
             if (!successful) {
                 logger.debug("Out queue for " + remoteId + " full (message discarded).");
             }
         } else {
-            ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-            try {
-                new ObjectOutputStream(bOut).writeObject(sm);
-            } catch (IOException ex) {
-                logger.error("Could not serialize message", ex);
-                throw new RuntimeException("Could not serialize message", ex);
-            }
-            byte[] data = bOut.toByteArray();
             sendLock.lock();
             try {
                 sendBytes(data, useMAC);
@@ -538,19 +531,19 @@ public class ServerConnection {
                 } finally {
                     queueLock.unlock();
                 }
-                ByteArrayOutputStream bOut = new ByteArrayOutputStream();
 
                 if (sm == null) {
                     continue;
                 }
                 ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-                try {
-                    new ObjectOutputStream(bOut).writeObject(sm);
+                byte[] data;
+                try (ObjectOutputStream oos = new ObjectOutputStream(bOut)) {
+                    oos.writeObject(sm);
+                    data = bOut.toByteArray();
                 } catch (IOException ex) {
                     logger.error("Could not serialize message", ex);
                     throw new RuntimeException("Could not serialize message", ex);
                 }
-                byte[] data = bOut.toByteArray();
                 //sendBytes(data, noMACs.contains(System.identityHashCode(data)));
                 int ref = System.identityHashCode(data);
                 boolean sendMAC = !noMACs.remove(ref);

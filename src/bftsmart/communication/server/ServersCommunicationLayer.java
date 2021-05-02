@@ -25,10 +25,8 @@ import org.slf4j.LoggerFactory;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -51,7 +49,6 @@ import java.util.stream.Collectors;
 public class ServersCommunicationLayer extends Thread {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
 
     private final ServerViewController controller;
     private final LinkedBlockingQueue<SystemMessage> inQueue;
@@ -181,13 +178,6 @@ public class ServersCommunicationLayer extends Thread {
 
 
     public final void send(int[] targets, SystemMessage sm, boolean useMAC) {
-        ByteArrayOutputStream bOut = new ByteArrayOutputStream(248);
-        try {
-            new ObjectOutputStream(bOut).writeObject(sm);
-        } catch (IOException ex) {
-            logger.error("Failed to serialize message", ex);
-        }
-
         for (int i : targets) {
             try {
                 if (i == me) {
