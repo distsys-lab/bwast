@@ -186,9 +186,13 @@ public class DynamicDivideStateManager extends SortStateManager {
             return;
         }
 
+
+        logger.info("[Time] combineChunks start: " + System.currentTimeMillis());
         if (state == null) {
             state = stateReceiver.getState();
         }
+        logger.info("[Time] combineChunks end: " + System.currentTimeMillis());
+
         senderStates.put(msg.getSender(), msg.getState());
 
         logger.info("[Time] Get State End: " + System.currentTimeMillis());

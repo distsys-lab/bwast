@@ -48,6 +48,7 @@ public class ChunkCollector {
     }
 
     public boolean addChunk(int chunkId, byte[] chunk) {
+        logger.info("[Time] verifyHash start: " + System.currentTimeMillis());
         if (!hashCollector.existsTrustedRootHash()) {
             pendingChunks.put(chunkId, chunk);
             return false;
@@ -60,6 +61,7 @@ public class ChunkCollector {
             logger.info("verify failed");
             return false;
         }
+        logger.info("[Time] verifyHash end: " + System.currentTimeMillis());
         collectedChunks.put(chunkId, chunk);
         return true;
     }

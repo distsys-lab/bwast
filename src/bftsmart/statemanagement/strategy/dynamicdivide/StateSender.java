@@ -98,7 +98,9 @@ public class StateSender {
             messages.addAll(addedChunkIds.stream().mapToObj(chunkId -> buildChunkMessage(chunkId, cid)).collect(Collectors.toList()));
             List<DynamicDivideSMReplyMessage> updatedDynamicDivideMessages = messages.stream().filter(x -> x instanceof DynamicDivideSMReplyMessage).map(x -> (DynamicDivideSMReplyMessage) x).collect(Collectors.toList());
             if (hashIds != null) {
+                logger.info("[Time] generateHashTree start: " + System.currentTimeMillis());
                 byte[] hashTree = HashTree.generatePrunedTree(stateHashes, hashIds);
+                logger.info("[Time] generateHashTree end: " + System.currentTimeMillis());
                 DynamicDivideSMReplyMessage head;
                 if (updatedDynamicDivideMessages.isEmpty()) {
                     head = buildChunkMessage(0, cid);
