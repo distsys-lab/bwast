@@ -138,15 +138,7 @@ public class StateReceiver {
     }
 
     private void sendRequestMessage(int serverId, BitSet chunkIds, boolean isFirstRequest) {
-        boolean requiresHash = !hashCollector.existsAllHashes();
-        BitSet hashIds;
-        if (isFirstRequest) {
-            hashIds = chunkIds;
-        } else if (requiresHash) {
-            hashIds = hashCollector.getRequiredHashIds();
-        } else {
-            hashIds = null;
-        }
+        BitSet hashIds = hashCollector.getRequiredHashIds(isFirstRequest, chunkIds);
         DynamicDivideSMRequestMessage msg = new DynamicDivideSMRequestMessage(processId, waitingCID, TOMUtil.SM_REQUEST, replicaId, chunkIds, hashIds, null, null, -1, -1);
         tomLayer.getCommunication().send(new int[]{serverId}, msg);
     }
