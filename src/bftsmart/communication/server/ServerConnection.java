@@ -343,7 +343,7 @@ public class ServerConnection {
                     socketInStream = new DataInputStream(new TrafficCountInputStream(this.socket.getInputStream(),
                             executor,
                             "Server" + remoteId,
-                            1000
+                            this.controller.getStaticConf().getStateRequestInterval()
                     ) {
                         @Override
                         void doNotify(String name, long traffic) {
