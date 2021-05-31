@@ -67,7 +67,7 @@ public class StateSender {
         return ByteBuffer.wrap(state, chunkId * normalChunkSize, chunkSize).slice();
     }
 
-    private static int sizeof(Object obj) throws IOException {
+    private static int sizeof(Object obj) {
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         int length;
