@@ -34,6 +34,7 @@ public class StateReceiver {
     private final HashCollector hashCollector;
     private Map<Integer, BitSet> lastDividedChunks = null;
     private ApplicationState state = null;
+    private int lowTrafficCount = 0;
 
     public StateReceiver(TOMLayer tomLayer,
                          ServerViewController SVController,
@@ -86,6 +87,7 @@ public class StateReceiver {
                 logger.info("[updateSendRequest] sendRequestMessage start: " + System.currentTimeMillis());
                 Map<Integer, Long> trafficOfConnections = tomLayer.getCommunication().getServersConn().getTrafficOfConnections();
                 logger.info("[TrafficTimer] traffic: " + trafficOfConnections);
+                alertIfTrafficIsTooLow(trafficOfConnections.values().stream().mapToLong(x -> x).sum());
                 Map<Integer, BitSet> chunkIdsMap = divideRequestChunkIds(trafficOfConnections);
                 for (Map.Entry<Integer, BitSet> chunkIdsEntry : chunkIdsMap.entrySet()) {
                     sendRequestMessage(chunkIdsEntry.getKey(), chunkIdsEntry.getValue(), false);
@@ -122,6 +124,17 @@ public class StateReceiver {
 
     public void reset() {
         trafficTimer.cancel();
+    }
+
+    private void alertIfTrafficIsTooLow(Long traffic) {
+        if (traffic / (double) requestInterval * 1000 > 1000 * 1000) {
+            lowTrafficCount = 0;
+            return;
+        }
+        lowTrafficCount += 1;
+        if (lowTrafficCount > 10 * (1000 / (double) requestInterval)) {
+            logger.warn("[TrafficAlert] traffic is too low for " + (lowTrafficCount * (1000 / (double) requestInterval)) + " seconds");
+        }
     }
 
     private void sendRequestMessage(int serverId, BitSet chunkIds, boolean isFirstRequest) {
@@ -164,6 +177,13 @@ public class StateReceiver {
             stateChunksNumsDiff.put(maxKey, stateChunksNumsDiff.get(maxKey) - 1);
             stateChunksNumsDiff.put(minKey, stateChunksNumsDiff.get(minKey) + 1);
         });
+        // add a chunkId if has no chunkIds
+        if (dividedChunks.values().stream().anyMatch(x -> x.cardinality() == 0)) {
+            BitSet maxReq = dividedChunks.values().stream().max(Comparator.comparingInt(BitSet::cardinality)).orElseThrow(() -> new RuntimeException("unexpected null"));
+            int minChunkIdOrError = maxReq.nextSetBit(0);
+            int minChunkId = minChunkIdOrError != -1 ? minChunkIdOrError : 0;
+            dividedChunks.values().stream().filter(x -> x.cardinality() == 0).forEach(x -> x.set(minChunkId));
+        }
         lastDividedChunks = dividedChunks;
         return dividedChunks;
     }
