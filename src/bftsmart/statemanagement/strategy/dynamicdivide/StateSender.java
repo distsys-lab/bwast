@@ -18,6 +18,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 import java.util.function.UnaryOperator;
@@ -40,8 +42,19 @@ public class StateSender {
         this.state = new DefaultApplicationState(state);
         this.replicaId = replicaId;
         int totalChunkNum = SVController.getStaticConf().getTotalNumberOfChunks();
-        this.stateHashes = HashTree.calcStateHashes(state.getSerializedState(), totalChunkNum);
+        if (!SVController.getStaticConf().getUsesWholeHash()) {
+            logger.info("[Time] calcStateHashes start: " + System.currentTimeMillis());
+            this.stateHashes = HashTree.calcStateHashes(state.getSerializedState(), totalChunkNum);
+            logger.info("[Time] calcStateHashes end: " + System.currentTimeMillis());
+        } else {
+            logger.info("[Time] calcWholeHash start: " + System.currentTimeMillis());
+            MessageDigest md = HashTree.getMessageDigest();
+            this.stateHashes = new ArrayList<>();
+            stateHashes.add(md.digest(state.getSerializedState()));
+            logger.info("[Time] calcWholeHash end: " + System.currentTimeMillis());
+        }
     }
+
     public static ByteBuffer buildStateChunkBuffer(int chunkId, int totalChunkNum, int normalChunkSize, byte[] state) {
         int lastChunk = totalChunkNum - 1;
         int lastChunkSize = state.length - ((totalChunkNum - 1) * normalChunkSize);
@@ -98,9 +111,6 @@ public class StateSender {
             messages.addAll(addedChunkIds.stream().mapToObj(chunkId -> buildChunkMessage(chunkId, cid)).collect(Collectors.toList()));
             List<DynamicDivideSMReplyMessage> updatedDynamicDivideMessages = messages.stream().filter(x -> x instanceof DynamicDivideSMReplyMessage).map(x -> (DynamicDivideSMReplyMessage) x).collect(Collectors.toList());
             if (hashIds != null) {
-                logger.info("[Time] generateHashTree start: " + System.currentTimeMillis());
-                byte[] hashTree = HashTree.generatePrunedTree(stateHashes, hashIds);
-                logger.info("[Time] generateHashTree end: " + System.currentTimeMillis());
                 DynamicDivideSMReplyMessage head;
                 if (updatedDynamicDivideMessages.isEmpty()) {
                     head = buildChunkMessage(0, cid);
@@ -110,7 +120,15 @@ public class StateSender {
                 }
                 ApplicationState stateWithMessageBatches = new DefaultApplicationState((DefaultApplicationState) state);
                 stateWithMessageBatches.setSerializedState(head.getState().getSerializedState());
-                DynamicDivideSMReplyMessage messageWithHash = new DynamicDivideSMReplyMessage(head, stateWithMessageBatches, hashIds, hashTree);
+                DynamicDivideSMReplyMessage messageWithHash;
+                if (!SVController.getStaticConf().getUsesWholeHash()) {
+                    logger.info("[Time] generateHashTree start: " + System.currentTimeMillis());
+                    byte[] hashTree = HashTree.generatePrunedTree(stateHashes, hashIds);
+                    logger.info("[Time] generateHashTree end: " + System.currentTimeMillis());
+                    messageWithHash = new DynamicDivideSMReplyMessage(head, stateWithMessageBatches, hashIds, hashTree);
+                } else {
+                    messageWithHash = new DynamicDivideSMReplyMessage(head, stateWithMessageBatches, hashIds, stateHashes.get(0));
+                }
                 messages.set(messages.indexOf(head), messageWithHash);
             }
             logger.info("size of replies (after update): " + updatedDynamicDivideMessages.size());

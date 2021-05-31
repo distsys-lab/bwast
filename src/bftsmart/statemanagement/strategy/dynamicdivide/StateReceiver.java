@@ -53,7 +53,11 @@ public class StateReceiver {
             initialStateChunksNums.put(sourceOrder[i], numbersOfStateChunks[i]);
         }
         int totalChunkNum = SVController.getStaticConf().getTotalNumberOfChunks();
-        hashCollector = new HashCollector(SVController, totalChunkNum);
+        if (!SVController.getStaticConf().getUsesWholeHash()) {
+            hashCollector = new HashCollector(SVController, totalChunkNum);
+        } else {
+            hashCollector = new WholeHashCollector(SVController, totalChunkNum);
+        }
         chunkCollector = new ChunkCollector(totalChunkNum, hashCollector);
     }
 
@@ -117,7 +121,20 @@ public class StateReceiver {
         if (state == null) {
             return null;
         }
-        state.setSerializedState(chunkCollector.getState());
+
+        byte[] serializedState = chunkCollector.getState();
+
+        if (SVController.getStaticConf().getUsesWholeHash()) {
+            logger.info("[Time] verify whole hash start: " + System.currentTimeMillis());
+            assert hashCollector instanceof WholeHashCollector;
+            boolean isCorrect = ((WholeHashCollector) hashCollector).verifyWhole(serializedState);
+            logger.info("[Time] verify whole hash end: " + System.currentTimeMillis());
+            if (!isCorrect) {
+                return null;
+            }
+        }
+
+        state.setSerializedState(serializedState);
         return state;
     }
 
