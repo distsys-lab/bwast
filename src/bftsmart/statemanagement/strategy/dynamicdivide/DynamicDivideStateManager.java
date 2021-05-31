@@ -114,7 +114,7 @@ public class DynamicDivideStateManager extends SortStateManager {
             ApplicationState thisState = dt.getRecoverer().getState(msg.getCID(), true);
             if (thisState == null || thisState.getSerializedState() == null) {
                 logger.warn("For some reason, I am sending a void state");
-                stateSender.sendVoidState(msg.getSender(), dt.getRecoverer(), msg.getCID());
+                StateSender.sendVoidState(SVController, tomLayer, msg.getSender(), dt.getRecoverer(), msg.getCID());
                 return;
             }
             if (thisState.getSerializedState().length < SVController.getStaticConf().getTotalNumberOfChunks()) {

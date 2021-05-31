@@ -144,15 +144,11 @@ public class StateSender {
         }
     }
 
-    public void sendVoidState(int serverId, Recoverable recoverer, int cid) {
+    public static void sendVoidState(ServerViewController svController, TOMLayer tomLayer, int serverId, Recoverable recoverer, int cid) {
         ApplicationState voidState = recoverer.getState(-1, true);
-        SMMessage message = new StandardSMMessage(SVController.getStaticConf().getProcessId(),
-                cid, TOMUtil.SM_REPLY, -1, voidState, SVController.getCurrentView(),
+        SMMessage message = new StandardSMMessage(svController.getStaticConf().getProcessId(),
+                cid, TOMUtil.SM_REPLY, -1, voidState, svController.getCurrentView(),
                 tomLayer.getSynchronizer().getLCManager().getLastReg(), tomLayer.execManager.getCurrentLeader());
-        sendMessage(serverId, message);
-    }
-
-    private void sendMessage(int serverId, SMMessage message) {
         tomLayer.getCommunication().send(new int[]{serverId}, message);
     }
 
