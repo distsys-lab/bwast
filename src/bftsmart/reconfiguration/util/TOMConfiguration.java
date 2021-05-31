@@ -16,17 +16,15 @@ limitations under the License.
 package bftsmart.reconfiguration.util;
 
 import bftsmart.tom.util.KeyLoader;
-import java.security.Provider;
-import java.util.StringTokenizer;
-
-import java.util.regex.Pattern;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.StringTokenizer;
+import java.util.regex.Pattern;
+
 public class TOMConfiguration extends Configuration {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     protected int n;
     protected int f;
@@ -47,6 +45,7 @@ public class TOMConfiguration extends Configuration {
     protected int[] stateChunksNums;
     protected int totalChunkNum;
     protected int stateRequestInterval;
+    protected boolean usesWholeHash;
     private int numNIOThreads;
     private int useMACs;
     private int useSignatures;
@@ -78,30 +77,29 @@ public class TOMConfiguration extends Configuration {
         super(processId, configHome, loader);
     }
 
-
     @Override
     protected void init() {
         super.init();
         try {
-            n = Integer.parseInt(configs.remove("system.servers.num").toString());
-            String s = (String) configs.remove("system.servers.f");
+            n = Integer.parseInt(configs.remove("system.servers.num"));
+            String s = configs.remove("system.servers.f");
             if (s == null) {
                 f = (int) Math.ceil((n - 1) / 3);
             } else {
                 f = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.shutdownhook");
-            shutdownHookEnabled = (s != null) ? Boolean.parseBoolean(s) : false;
+            s = configs.remove("system.shutdownhook");
+            shutdownHookEnabled = s != null && Boolean.parseBoolean(s);
 
-            s = (String) configs.remove("system.totalordermulticast.period");
+            s = configs.remove("system.totalordermulticast.period");
             if (s == null) {
                 tomPeriod = n * 5;
             } else {
                 tomPeriod = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.totalordermulticast.timeout");
+            s = configs.remove("system.totalordermulticast.timeout");
             if (s == null) {
                 requestTimeout = 10000;
             } else {
@@ -111,7 +109,7 @@ public class TOMConfiguration extends Configuration {
                 }
             }
 
-            s = (String) configs.remove("system.totalordermulticast.highMark");
+            s = configs.remove("system.totalordermulticast.highMark");
             if (s == null) {
                 paxosHighMark = 10000;
             } else {
@@ -121,7 +119,7 @@ public class TOMConfiguration extends Configuration {
                 }
             }
 
-            s = (String) configs.remove("system.totalordermulticast.revival_highMark");
+            s = configs.remove("system.totalordermulticast.revival_highMark");
             if (s == null) {
                 revivalHighMark = 10;
             } else {
@@ -131,7 +129,7 @@ public class TOMConfiguration extends Configuration {
                 }
             }
 
-            s = (String) configs.remove("system.totalordermulticast.timeout_highMark");
+            s = configs.remove("system.totalordermulticast.timeout_highMark");
             if (s == null) {
                 timeoutHighMark = 100;
             } else {
@@ -141,70 +139,70 @@ public class TOMConfiguration extends Configuration {
                 }
             }
 
-            s = (String) configs.remove("system.totalordermulticast.maxbatchsize");
+            s = configs.remove("system.totalordermulticast.maxbatchsize");
             if (s == null) {
                 maxBatchSize = 100;
             } else {
                 maxBatchSize = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.totalordermulticast.replayVerificationTime");
+            s = configs.remove("system.totalordermulticast.replayVerificationTime");
             if (s == null) {
                 replyVerificationTime = 0;
             } else {
                 replyVerificationTime = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.totalordermulticast.nonces");
+            s = configs.remove("system.totalordermulticast.nonces");
             if (s == null) {
                 numberOfNonces = 0;
             } else {
                 numberOfNonces = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.communication.useSenderThread");
+            s = configs.remove("system.communication.useSenderThread");
             if (s == null) {
                 useSenderThread = false;
             } else {
                 useSenderThread = Boolean.parseBoolean(s);
             }
 
-            s = (String) configs.remove("system.communication.numNIOThreads");
+            s = configs.remove("system.communication.numNIOThreads");
             if (s == null) {
                 numNIOThreads = 2;
             } else {
                 numNIOThreads = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.communication.useMACs");
+            s = configs.remove("system.communication.useMACs");
             if (s == null) {
                 useMACs = 0;
             } else {
                 useMACs = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.communication.useSignatures");
+            s = configs.remove("system.communication.useSignatures");
             if (s == null) {
                 useSignatures = 0;
             } else {
                 useSignatures = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.totalordermulticast.state_transfer");
+            s = configs.remove("system.totalordermulticast.state_transfer");
             if (s == null) {
                 stateTransferEnabled = false;
             } else {
                 stateTransferEnabled = Boolean.parseBoolean(s);
             }
 
-            s = (String) configs.remove("system.totalordermulticast.transfer_algorithm");
+            s = configs.remove("system.totalordermulticast.transfer_algorithm");
             if (s == null) {
                 transferAlgorithm = "standard";
             } else {
                 transferAlgorithm = s;
             }
 
-            s = (String) configs.remove("system.totalordermulticast.source_order");
+            s = configs.remove("system.totalordermulticast.source_order");
             if (s == null) {
                 sourceOrder = null;
             } else {
@@ -215,7 +213,7 @@ public class TOMConfiguration extends Configuration {
                 }
             }
 
-            s = (String) configs.remove("system.totalordermulticast.state_chunks_nums");
+            s = configs.remove("system.totalordermulticast.state_chunks_nums");
             if (s == null) {
                 stateChunksNums = null;
             } else {
@@ -226,35 +224,42 @@ public class TOMConfiguration extends Configuration {
                 }
             }
 
-            s = (String) configs.remove("system.totalordermulticast.total_chunk_num");
+            s = configs.remove("system.totalordermulticast.total_chunk_num");
             if (s == null) {
                 totalChunkNum = 0;
             } else {
                 totalChunkNum = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.totalordermulticast.state_request_interval");
+            s = configs.remove("system.totalordermulticast.state_request_interval");
             if (s == null) {
                 stateRequestInterval = 0;
             } else {
                 stateRequestInterval = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.totalordermulticast.checkpoint_period");
+            s = configs.remove("system.totalordermulticast.uses_whole_hash");
+            if (s == null) {
+                usesWholeHash = false;
+            } else {
+                usesWholeHash = Boolean.parseBoolean(s);
+            }
+
+            s = configs.remove("system.totalordermulticast.checkpoint_period");
             if (s == null) {
                 checkpointPeriod = 1;
             } else {
                 checkpointPeriod = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.communication.useControlFlow");
+            s = configs.remove("system.communication.useControlFlow");
             if (s == null) {
                 useControlFlow = 0;
             } else {
                 useControlFlow = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.initial.view");
+            s = configs.remove("system.initial.view");
             if (s == null) {
                 initialView = new int[n];
                 for (int i = 0; i < n; i++) {
@@ -268,14 +273,14 @@ public class TOMConfiguration extends Configuration {
                 }
             }
 
-            s = (String) configs.remove("system.ttp.id");
+            s = configs.remove("system.ttp.id");
             if (s == null) {
                 ttpId = -1;
             } else {
                 ttpId = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.communication.inQueueSize");
+            s = configs.remove("system.communication.inQueueSize");
             if (s == null) {
                 inQueueSize = 1000;
             } else {
@@ -287,7 +292,7 @@ public class TOMConfiguration extends Configuration {
 
             }
 
-            s = (String) configs.remove("system.communication.outQueueSize");
+            s = configs.remove("system.communication.outQueueSize");
             if (s == null) {
                 outQueueSize = 1000;
             } else {
@@ -297,78 +302,78 @@ public class TOMConfiguration extends Configuration {
                 }
             }
 
-            s = (String) configs.remove("system.totalordermulticast.log");
+            s = configs.remove("system.totalordermulticast.log");
             if (s != null) {
                     isToLog = Boolean.parseBoolean(s);
             } else {
                     isToLog = false;
             }
 
-            s = (String) configs
-                            .remove("system.totalordermulticast.log_parallel");
+            s = configs
+                    .remove("system.totalordermulticast.log_parallel");
             if (s != null) {
                     parallelLog = Boolean.parseBoolean(s);
             } else {
                     parallelLog = false;
             }
 
-            s = (String) configs
-                            .remove("system.totalordermulticast.log_to_disk");
+            s = configs
+                    .remove("system.totalordermulticast.log_to_disk");
             if (s != null) {
                     logToDisk = Boolean.parseBoolean(s);
             } else {
                     logToDisk = false;
             }
 
-            s = (String) configs
-                            .remove("system.totalordermulticast.sync_log");
+            s = configs
+                    .remove("system.totalordermulticast.sync_log");
             if (s != null) {
                     syncLog = Boolean.parseBoolean(s);
             } else {
                     syncLog = false;
             }
 
-            s = (String) configs
-                            .remove("system.totalordermulticast.checkpoint_to_disk");
+            s = configs
+                    .remove("system.totalordermulticast.checkpoint_to_disk");
             if (s == null) {
                     isToWriteCkpsToDisk = false;
             } else {
                     isToWriteCkpsToDisk = Boolean.parseBoolean(s);
             }
 
-            s = (String) configs
-                            .remove("system.totalordermulticast.sync_ckp");
+            s = configs
+                    .remove("system.totalordermulticast.sync_ckp");
             if (s == null) {
                     syncCkp = false;
             } else {
-                    syncCkp = Boolean.parseBoolean(s);
+                syncCkp = Boolean.parseBoolean(s);
             }
 
-            s = (String) configs.remove("system.totalordermulticast.global_checkpoint_period");
+            s = configs.remove("system.totalordermulticast.global_checkpoint_period");
             if (s == null) {
                 globalCheckpointPeriod = 1;
             } else {
                 globalCheckpointPeriod = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.bft");
-            isBFT = (s != null) ? Boolean.parseBoolean(s) : true;
+            s = configs.remove("system.bft");
+            isBFT = s == null || Boolean.parseBoolean(s);
 
-            s = (String) configs.remove("system.numrepliers");
+            s = configs.remove("system.numrepliers");
             if (s == null) {
                 numRepliers = 0;
             } else {
                 numRepliers = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.numnettyworkers");
+            s = configs.remove("system.numnettyworkers");
             if (s == null) {
                 numNettyWorkers = 0;
             } else {
                 numNettyWorkers = Integer.parseInt(s);
             }
 
-            s = (String) configs.remove("system.communication.bindaddress");
+            s = configs.remove("system.communication.bindaddress");
 
             Pattern pattern = Pattern.compile("^(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])$");
 
@@ -378,7 +383,7 @@ public class TOMConfiguration extends Configuration {
                 bindAddress = s;
             }
 
-            s = (String) configs.remove("system.samebatchsize");
+            s = configs.remove("system.samebatchsize");
             if (s != null) {
                     sameBatchSize = Boolean.parseBoolean(s);
             } else {
@@ -392,7 +397,7 @@ public class TOMConfiguration extends Configuration {
     }
 
     public String getViewStoreClass() {
-        String s = (String) configs.remove("view.storage.handler");
+        String s = configs.remove("view.storage.handler");
         if (s == null) {
             return "bftsmart.reconfiguration.views.DefaultViewStorage";
         } else {
@@ -465,9 +470,17 @@ public class TOMConfiguration extends Configuration {
         return stateChunksNums;
     }
 
-    public int getTotalNumberOfChunks() { return totalChunkNum; }
+    public int getTotalNumberOfChunks() {
+        return totalChunkNum;
+    }
 
-    public int getStateRequestInterval() { return stateRequestInterval; }
+    public int getStateRequestInterval() {
+        return stateRequestInterval;
+    }
+
+    public boolean getUsesWholeHash() {
+        return usesWholeHash;
+    }
 
     public int getInQueueSize() {
         return inQueueSize;
