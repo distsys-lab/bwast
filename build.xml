@@ -8,9 +8,9 @@
 	<property name="lib.dir" location="lib" />
 	<property name="lib" location="lib" />
 	<target name="main" depends="compile, jar" description="Main target">
-		<echo>
-            Building the .jar file.
-        </echo>
+		<echo level="info">
+			Building the .jar file.
+		</echo>
 	</target>
 	<path id="libs">
 		<fileset dir="${lib}" includes="*.jar" />
