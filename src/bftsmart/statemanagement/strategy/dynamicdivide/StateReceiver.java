@@ -65,7 +65,6 @@ public class StateReceiver {
         }
 
         logger.info("I just sent a request to the other replicas for the state up to CID " + waitingCID);
-        logger.info("[Time] Send Request End: " + System.currentTimeMillis());
 
         if (trafficTimer != null) {
             trafficTimer.cancel();
