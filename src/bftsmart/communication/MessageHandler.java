@@ -154,8 +154,6 @@ public class MessageHandler {
 	            /** This is Joao's code, to handle state transfer */
 	            } else if (sm instanceof SMMessage) {
                     SMMessage smsg = (SMMessage) sm;
-                    // System.out.println("(MessageHandler.processData) SM_MSG received: type " + smsg.getType() + ", regency " + smsg.getRegency() + ", (replica " + smsg.getSender() + ")");
-                    logger.info("chiba: type=" + smsg.getType());
                     switch (smsg.getType()) {
                         case TOMUtil.SM_REQUEST:
                             tomLayer.getStateManager().SMRequestDeliver(smsg, tomLayer.controller.getStaticConf().isBFT());

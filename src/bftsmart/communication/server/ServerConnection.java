@@ -554,9 +554,6 @@ public class ServerConnection {
                 } finally {
                     sendLock.unlock();
                 }
-                if (sm instanceof SMMessage) {
-                    logger.info("chiba: sent SMMessage! remoteId: " + remoteId);
-                }
             }
 
             logger.debug("Sender for " + remoteId + " stopped!");
