@@ -78,13 +78,6 @@ public class StateReceiver {
         hashCollector.reset();
         chunkCollector.reset();
 
-        Map<Integer, BitSet> chunkIdsMap = initialDivideRequestChunkIds();
-        logger.info("[updateSendRequest] sendRequestMessage start: " + System.currentTimeMillis());
-        for (Map.Entry<Integer, BitSet> chunkIdsEntry : chunkIdsMap.entrySet()) {
-            logger.info("[updateSendRequest] RequestChunkIds(" + chunkIdsEntry.getKey() + "): " + chunkIdsEntry.getValue());
-            sendRequestMessage(chunkIdsEntry.getKey(), chunkIdsEntry.getValue(), true);
-        }
-        logger.info("[updateSendRequest] sendRequestMessage end: " + System.currentTimeMillis());
         trafficTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
@@ -95,11 +88,11 @@ public class StateReceiver {
                 Map<Integer, BitSet> chunkIdsMap = divideRequestChunkIds(trafficOfConnections);
                 for (Map.Entry<Integer, BitSet> chunkIdsEntry : chunkIdsMap.entrySet()) {
                     logger.info("[updateSendRequest] RequestChunkIds(" + chunkIdsEntry.getKey() + "): " + chunkIdsEntry.getValue());
-                    sendRequestMessage(chunkIdsEntry.getKey(), chunkIdsEntry.getValue(), false);
+                    sendRequestMessage(chunkIdsEntry.getKey(), chunkIdsEntry.getValue());
                 }
                 logger.info("[updateSendRequest] sendRequestMessage end: " + System.currentTimeMillis());
             }
-        }, requestInterval, requestInterval);
+        }, 0, requestInterval);
     }
 
     public void receiveStateChunk(DynamicDivideSMReplyMessage replyMessage) {
@@ -156,8 +149,8 @@ public class StateReceiver {
         }
     }
 
-    private void sendRequestMessage(int serverId, BitSet chunkIds, boolean isFirstRequest) {
-        BitSet hashIds = hashCollector.getRequiredHashIds(isFirstRequest, chunkIds);
+    private void sendRequestMessage(int serverId, BitSet chunkIds) {
+        BitSet hashIds = hashCollector.getRequiredHashIds(chunkIds);
         DynamicDivideSMRequestMessage msg = new DynamicDivideSMRequestMessage(processId, waitingCID, TOMUtil.SM_REQUEST, replicaId, chunkIds, hashIds, null, null, -1, -1);
         tomLayer.getCommunication().send(new int[]{serverId}, msg);
     }

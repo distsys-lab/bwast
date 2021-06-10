@@ -113,4 +113,8 @@ public class HashTree {
     public boolean existsHash(int chunkId) {
         return hashes.containsKey(chunkId);
     }
+
+    public boolean isEmpty() {
+        return rootNode == null;
+    }
 }

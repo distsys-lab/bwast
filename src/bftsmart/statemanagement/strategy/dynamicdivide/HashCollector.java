@@ -65,14 +65,11 @@ public class HashCollector {
         return existsTrustedRootHash() && hashTree.existsAllHashes();
     }
 
-    public BitSet getRequiredHashIds(boolean isFirstRequest, BitSet chunkIds) {
+    public BitSet getRequiredHashIds(BitSet chunkIds) {
         if (existsAllHashes()) {
             return null; // no hash required
         }
-        if (!existsTrustedRootHash()) {
-            return new BitSet(); // only root hash required
-        }
-        if (isFirstRequest) {
+        if (!existsTrustedRootHash() || hashTree.isEmpty()) {
             return chunkIds;
         }
         return hashTree.getRequiredHashIds();

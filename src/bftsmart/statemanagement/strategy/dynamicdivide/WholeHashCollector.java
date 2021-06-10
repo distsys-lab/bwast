@@ -66,7 +66,7 @@ public class WholeHashCollector extends HashCollector {
     }
 
     @Override
-    public BitSet getRequiredHashIds(boolean isFirstRequest, BitSet chunkIds) {
+    public BitSet getRequiredHashIds(BitSet chunkIds) {
         if (!isWholeHashCollected) {
             return new BitSet(); // only root hash required
         } else {
