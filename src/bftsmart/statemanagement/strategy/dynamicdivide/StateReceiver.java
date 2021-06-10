@@ -79,11 +79,12 @@ public class StateReceiver {
         chunkCollector.reset();
 
         Map<Integer, BitSet> chunkIdsMap = initialDivideRequestChunkIds();
+        logger.info("[updateSendRequest] sendRequestMessage start: " + System.currentTimeMillis());
         for (Map.Entry<Integer, BitSet> chunkIdsEntry : chunkIdsMap.entrySet()) {
-            logger.info("[updateSendRequest] sendRequestMessage start: " + System.currentTimeMillis());
+            logger.info("[updateSendRequest] RequestChunkIds(" + chunkIdsEntry.getKey() + "): " + chunkIdsEntry.getValue());
             sendRequestMessage(chunkIdsEntry.getKey(), chunkIdsEntry.getValue(), true);
-            logger.info("[updateSendRequest] sendRequestMessage end: " + System.currentTimeMillis());
         }
+        logger.info("[updateSendRequest] sendRequestMessage end: " + System.currentTimeMillis());
         trafficTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
@@ -93,6 +94,7 @@ public class StateReceiver {
                 alertIfTrafficIsTooLow(trafficOfConnections.values().stream().mapToLong(x -> x).sum());
                 Map<Integer, BitSet> chunkIdsMap = divideRequestChunkIds(trafficOfConnections);
                 for (Map.Entry<Integer, BitSet> chunkIdsEntry : chunkIdsMap.entrySet()) {
+                    logger.info("[updateSendRequest] RequestChunkIds(" + chunkIdsEntry.getKey() + "): " + chunkIdsEntry.getValue());
                     sendRequestMessage(chunkIdsEntry.getKey(), chunkIdsEntry.getValue(), false);
                 }
                 logger.info("[updateSendRequest] sendRequestMessage end: " + System.currentTimeMillis());
@@ -110,6 +112,7 @@ public class StateReceiver {
                 }
             }
         }
+        logger.info("[receiveStateChunk] received from " + replyMessage.getSender() + " , chunkId: " + replyMessage.getChunkId());
         chunkCollector.addChunk(replyMessage.getChunkId(), replyMessage.getState().getSerializedState());
     }
 

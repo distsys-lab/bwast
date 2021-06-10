@@ -63,7 +63,6 @@ public class DynamicDivideStateManager extends SortStateManager {
             return;
         }
 
-        logger.info("[Time] Request State Transfer Start: " + System.currentTimeMillis());
         stateReceiver = new StateReceiver(tomLayer, SVController, replicaId, waitingCID);
 
         TimerTask stateTask = new TimerTask() {
