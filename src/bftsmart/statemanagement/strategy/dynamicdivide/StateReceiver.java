@@ -191,9 +191,10 @@ public class StateReceiver {
         // add a chunkId if has no chunkIds
         if (dividedChunks.values().stream().anyMatch(x -> x.cardinality() == 0)) {
             BitSet maxReq = dividedChunks.values().stream().max(Comparator.comparingInt(BitSet::cardinality)).orElseThrow(() -> new RuntimeException("unexpected null"));
-            int minChunkIdOrError = maxReq.nextSetBit(0);
-            int minChunkId = minChunkIdOrError != -1 ? minChunkIdOrError : 0;
-            dividedChunks.values().stream().filter(x -> x.cardinality() == 0).forEach(x -> x.set(minChunkId));
+            int minChunkId = maxReq.nextSetBit(0);
+            if (minChunkId > -1) {
+                dividedChunks.values().stream().filter(x -> x.cardinality() == 0).forEach(x -> x.set(minChunkId));
+            }
         }
         lastDividedChunks = dividedChunks;
         return dividedChunks;
