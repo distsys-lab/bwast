@@ -43,7 +43,7 @@ public class DynamicDivideStateManager extends SortStateManager {
     private StateReceiver stateReceiver = null;
     private StateSender stateSender = null;
     private final List<Long> timeLog = new ArrayList<>(Collections.nCopies(5, 0L));
-    private long oldA = 0;
+    private final long oldA = 0;
 
     @Override
     protected void requestState() {
@@ -130,16 +130,13 @@ public class DynamicDivideStateManager extends SortStateManager {
 
     @Override
     public void SMReplyDeliver(SMMessage msg, boolean isBFT) {
-        long a = System.nanoTime();
         if (!(msg instanceof DynamicDivideSMReplyMessage)) {
             logger.debug("not dynamic divide reply " + msg);
             super.SMReplyDeliver(msg, isBFT);
             return;
         }
         DynamicDivideSMReplyMessage alMsg = (DynamicDivideSMReplyMessage) msg;
-        long b = System.nanoTime();
 
-        logger.debug("chiba: receive chunk id = " + alMsg.getChunkId());
         lockTimer.lock();
         if (!SVController.getStaticConf().isStateTransferEnabled()) {
             logger.debug("guarded due to isStateTransferEnabled() is false");
@@ -152,11 +149,8 @@ public class DynamicDivideStateManager extends SortStateManager {
             return;
         }
 
-        long c = System.nanoTime();
-
         stateReceiver.receiveStateChunk(alMsg);
 
-        long d = System.nanoTime();
         int currentRegency;
         int currentLeader;
         View currentView;
@@ -171,15 +165,6 @@ public class DynamicDivideStateManager extends SortStateManager {
             senderViews.put(msgSender, msg.getView());
             senderProofs.put(msgSender, msgCD);
         }
-
-        long e = System.nanoTime();
-
-        timeLog.set(0, timeLog.get(0) + b - a);
-        timeLog.set(1, timeLog.get(1) + c - b);
-        timeLog.set(2, timeLog.get(2) + d - c);
-        timeLog.set(3, timeLog.get(3) + e - d);
-        timeLog.set(4, timeLog.get(4) + (oldA == 0L ? 0 : oldA - e));
-        oldA = a;
 
         if (!stateReceiver.isReceivedAllChunks()) {
             return;

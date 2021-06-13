@@ -18,7 +18,6 @@ package bftsmart.communication.server;
 import bftsmart.communication.SystemMessage;
 import bftsmart.reconfiguration.ServerViewController;
 import bftsmart.reconfiguration.VMMessage;
-import bftsmart.statemanagement.SMMessage;
 import bftsmart.tom.ServiceReplica;
 import bftsmart.tom.util.TOMUtil;
 import org.slf4j.Logger;
@@ -618,15 +617,12 @@ public class ServerConnection {
                                     logger.warn("Inqueue full (message from " + remoteId + " discarded).");
                                 }
                             }
-                            if (sm instanceof SMMessage) {
-                                logger.debug("chiba: SMMessage! sender: " + sm.getSender());
-                            }
                         } else {
                             //TODO: violation of authentication... we should do something
                             logger.warn("Violation of authentication in message received from " + remoteId);
                         }
                     } catch (ClassNotFoundException ex) {
-                        logger.debug("chiba: ClassNotFoundException");
+                        logger.debug("invalid message sent, just ignore");
                         //invalid message sent, just ignore;
                     } catch (IOException ex) {
                         if (doWork) {
