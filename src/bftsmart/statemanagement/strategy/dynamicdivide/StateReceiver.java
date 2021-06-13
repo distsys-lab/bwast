@@ -105,7 +105,9 @@ public class StateReceiver {
                 }
             }
         }
-        logger.info("[receiveStateChunk] received from " + replyMessage.getSender() + " , chunkId: " + replyMessage.getChunkId());
+        logger.info("[receiveStateChunk] received from " + replyMessage.getSender() +
+                " , chunkId: " + replyMessage.getChunkId() +
+                ", time: " + System.currentTimeMillis());
         chunkCollector.addChunk(replyMessage.getChunkId(), replyMessage.getState().getSerializedState());
     }
 
