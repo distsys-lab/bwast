@@ -1,3 +1,18 @@
+# Preface
+
+This repository includes the source code that was used for the experimental evaluation in the paper:
+```
+Chiba, T, Ohmura, R, Nakamura, J. Network Bandwidth Variation-Adapted State Transfer for Geo-Replicated State Machines and its Application to Dynamic Replica Replacement. Concurrency Computat Pract Exper. (to appear)
+```
+This code was forked from [this commit](https://github.com/bft-smart/library/commit/0f2d4071ef5a2c168768f960aad2ef1d6832648d) of the successful open-source BFT SMR library, BFT-SMaRt.
+We highly appreciate their contributions.
+
+If you have any questions, please feel free to contact the corresponding author, [Junya Nakamura](mailto:junya@imc.tut.ac.jp).
+
+---
+
+The original README is as follows.
+
 # Byzantine Fault-Tolerant (BFT) State Machine Replication (SMaRt) v1.2
 
 This is a Byzantine fault-tolerant state machine replication project named BFT-SMaRt, a Java open source library maintained by the LaSIGE research unit at the University of Lisbon.
