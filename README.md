@@ -8,6 +8,8 @@ We highly appreciate their contributions.
 
 If you have any questions, please feel free to contact the corresponding author, [Junya Nakamura](mailto:junya@imc.tut.ac.jp).
 
+[![DOI](https://zenodo.org/badge/543945145.svg)](https://zenodo.org/badge/latestdoi/543945145)
+
 ---
 
 The original README is as follows.
