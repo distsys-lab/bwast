@@ -1,9 +1,8 @@
 # Preface
 
 This repository includes the source code that was used for the experimental evaluation in the paper:
-```
-Chiba, T, Ohmura, R, Nakamura, J. Network Bandwidth Variation-Adapted State Transfer for Geo-Replicated State Machines and its Application to Dynamic Replica Replacement. Concurrency Computat Pract Exper. (to appear)
-```
+> Chiba, T, Ohmura, R, Nakamura, J. Network Bandwidth Variation-Adapted State Transfer for Geo-Replicated State Machines and its Application to Dynamic Replica Replacement. Concurrency Computat Pract Exper. (to appear)
+
 This code was forked from [this commit](https://github.com/bft-smart/library/commit/0f2d4071ef5a2c168768f960aad2ef1d6832648d) of the successful open-source BFT SMR library, BFT-SMaRt.
 We highly appreciate their contributions.
 
